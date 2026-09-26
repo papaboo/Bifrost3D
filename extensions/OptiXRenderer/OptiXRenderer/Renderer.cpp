@@ -758,7 +758,7 @@ struct Renderer::Implementation {
                 device_material.flags = Material::Flags(host_material.get_flags().raw());
                 device_material.shading_model = Material::ShadingModel(int(host_material.get_shading_model()));
 
-                device_material.tint = to_float3(host_material.get_tint());
+                device_material.tint = host_material.get_tint();
                 if (host_material.has_tint_texture()) {
                     // Validate that the image has 4 channels! Otherwise OptiX goes boom boom.
                     TextureID texture_ID = host_material.get_tint_roughness_texture_ID();
@@ -806,7 +806,7 @@ struct Renderer::Implementation {
                 } else
                     device_material.coverage_texture_ID = 0;
 
-                device_material.emission = to_float3(host_material.get_emission());
+                device_material.emission = host_material.get_emission();
             };
 
             if (!Materials::get_changed_materials().is_empty()) {
@@ -860,21 +860,33 @@ struct Renderer::Implementation {
 
                         device_light.flags = Light::Sphere;
 
-                        device_light.sphere.position = to_float3(host_light.get_node().get_global_transform().translation);
-                        device_light.sphere.radius = host_light.get_radius();
-                        device_light.sphere.power = to_float3(host_light.get_power());
+                        auto light_position = host_light.get_node().get_global_transform().translation;
+                        device_light.sphere = SphereLight(light_position, host_light.get_radius(), host_light.get_power());
                         break;
                     }
-                    case LightSources::Type::Spot: {
+                    case LightSources::Type::Disk: {
+                        Scene::DiskLight host_light = light_ID;
+                        auto light_transform = host_light.get_node().get_global_transform();
+
+                        device_light.flags = Light::Disk;
+
+                        auto light_position = host_light.get_node().get_global_transform().translation;
+                        auto light_direction = host_light.get_node().get_global_transform().rotation.forward();
+                        Math::Disk surface = Math::Disk(light_position, host_light.get_radius(), light_direction);
+                        device_light.disk = DiskLight(surface, host_light.get_power(), true);
+                        break;
+                    }
+                    case LightSources::Type::Spot:
+                    {
                         Scene::SpotLight host_light = light_ID;
                         auto light_transform = host_light.get_node().get_global_transform();
 
                         device_light.flags = Light::Spot;
 
-                        device_light.spot.position = to_float3(light_transform.translation);
+                        device_light.spot.position = light_transform.translation;
                         device_light.spot.radius = host_light.get_radius();
-                        device_light.spot.power = to_float3(host_light.get_power());
-                        device_light.spot.direction = to_float3(light_transform.rotation.forward());
+                        device_light.spot.power = host_light.get_power();
+                        device_light.spot.direction = light_transform.rotation.forward();
                         device_light.spot.cos_angle = host_light.get_cos_angle();
                         break;
                     }
@@ -883,16 +895,15 @@ struct Renderer::Implementation {
 
                         device_light.flags = Light::Directional;
 
-                        device_light.directional.direction = to_float3(host_light.get_node().get_global_transform().rotation.forward());
-                        device_light.directional.radiance = to_float3(host_light.get_radiance());
+                        auto light_direction = host_light.get_node().get_global_transform().rotation.forward();
+                        device_light.directional = DirectionalLight(light_direction, host_light.get_radiance());
                         break;
                     }
                     default:
                         printf("OptiXRenderer warning: Unknown light source type %u on light %u\n", LightSources::get_type(light_ID), light_ID.get_index());
+                        // Create a bright purple lightsource at origo to show the bad lightsource in the scene.
                         device_light.flags = Light::Sphere;
-                        device_light.sphere.position = { 0, 0, 0 };
-                        device_light.sphere.power = { 100000, 0, 100000 };
-                        device_light.sphere.radius = 5;
+                        device_light.sphere = SphereLight({ 0, 0, 0 }, 5, { 100000, 0, 100000 });
                     }
 
                     if (!LightSources::is_delta_light(light_ID))
@@ -1111,20 +1122,18 @@ struct Renderer::Implementation {
             for (SceneRoot scene_data : SceneRoots::get_changed_scenes()) {
                 if (scene_data.get_changes().contains(SceneRoots::Change::Destroyed))
                 {
-                    float3 black = {0, 0, 0};
 #if PRESAMPLE_ENVIRONMENT_MAP
-                    scene.environment = PresampledEnvironmentMap(black);
+                    scene.environment = PresampledEnvironmentMap(RGB::black());
                     scene.GPU_state.environment_light = scene.environment.get_light().presampled_environment;
 #else
-                    scene.environment = EnvironmentMap(black);
+                    scene.environment = EnvironmentMap(RGB::black());
                     scene.GPU_state.environment_light = scene.environment.get_light().environment;
 #endif
                     should_reset_accumulations = true;
                     continue;
                 }
 
-                Math::RGB _env_tint = scene_data.get_environment_tint();
-                float3 env_tint = make_float3(_env_tint.r, _env_tint.g, _env_tint.b);
+                Math::RGB env_tint = scene_data.get_environment_tint();
                 if (scene_data.get_changes().any_set(SceneRoots::Change::EnvironmentTint, SceneRoots::Change::Created)) {
                     scene.environment.set_tint(env_tint);
                     scene.GPU_state.environment_light.set_tint(env_tint);

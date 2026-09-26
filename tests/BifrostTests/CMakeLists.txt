@@ -30,6 +30,9 @@ set(ASSETS_SHADING_BSDFS_SRCS
   Assets/Shading/BSDFs/OrenNayarTest.h
 )
 set(ASSETS_SHADING_LIGHTSOURCES_SRCS
+  Assets/Shading/LightSources/AreaLightsTest.h
+  Assets/Shading/LightSources/DirectionalLightTest.h
+  Assets/Shading/LightSources/DiskLightTest.h
   Assets/Shading/LightSources/LightTestUtils.h
   Assets/Shading/LightSources/SphereLightTest.h
   Assets/Shading/LightSources/TriangleLightTest.h

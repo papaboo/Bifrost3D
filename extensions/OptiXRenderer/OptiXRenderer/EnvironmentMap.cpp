@@ -17,7 +17,7 @@ using namespace optix;
 
 namespace OptiXRenderer {
 
-EnvironmentMap::EnvironmentMap(Context& context, const Assets::InfiniteAreaLight& light, float3 tint, TextureSampler environment_sampler)
+EnvironmentMap::EnvironmentMap(Context& context, const Assets::InfiniteAreaLight& light, RGB tint, TextureSampler environment_sampler)
     : m_environment_map(light.get_texture()), m_color_texture(environment_sampler) {
 
     bool is_dark_image = light.image_integral() < 0.00001f;

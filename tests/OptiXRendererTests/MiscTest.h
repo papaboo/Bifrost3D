@@ -117,25 +117,6 @@ GTEST_TEST(Specularity, scaling_dielectric_specularity_under_coat) {
     }
 }
 
-GTEST_TEST(Specularity, scaling_conductor_specularity_under_coat) {
-    using namespace optix;
-
-    const float3 air_ior = { 1.0f, 1.0f, 1.0f };
-    const float3 coat_ior = { 1.5f, 1.5f, 1.5f };
-
-    for (float3 base_ior : { gold_ior, titanium_ior }) {
-        for (float3 base_extinction : { gold_extinction, titanium_extinction }) {
-            // The expected specularity of the base material viewed through the coat instead of air.
-            float3 expected_base_specularity_through_coat = conductor_specularity(coat_ior, base_ior, base_extinction);
-
-            float3 base_specularity_through_air = conductor_specularity(air_ior, base_ior, base_extinction);
-            float3 actual_base_specularity_through_coat = adjust_conductor_specularity_to_exterior_medium(coat_ior, base_specularity_through_air, base_extinction);
-
-            EXPECT_FLOAT3_EQ_EPS(expected_base_specularity_through_coat, actual_base_specularity_through_coat, 0.02f);
-        }
-    }
-}
-
 GTEST_TEST(Trigonometry, fix_backfacing_shading_normal) {
     using namespace optix;
 

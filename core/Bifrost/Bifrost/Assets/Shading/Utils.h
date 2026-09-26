@@ -199,6 +199,11 @@ struct alignas(8) LightResponse {
         LightResponse evaluation = {};
         return evaluation;
     }
+
+    _inline_all_archs_ static LightResponse delta_dirac() {
+        LightResponse evaluation = { Math::RGB::black(), Math::MonteCarlo::PDF::delta_dirac(0) };
+        return evaluation;
+    }
 };
 
 struct alignas(16) LightSample {

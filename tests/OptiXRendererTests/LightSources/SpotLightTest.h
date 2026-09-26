@@ -22,36 +22,34 @@
 namespace OptiXRenderer {
 
 GTEST_TEST(SpotLight, consistent_PDF_and_radiance) {
-    using namespace optix;
-
     const unsigned int MAX_POSITION_SAMPLES = 16u;
     const unsigned int MAX_LIGHT_SAMPLES = 16u;
 
     SpotLight light;
-    light.position = make_float3(0.0f, 10.0f, 0.0f);
-    light.direction = make_float3(0.0f, -1.0f, 0.0f);
+    light.position = Vector3f(0.0f, 10.0f, 0.0f);
+    light.direction = Vector3f(0.0f, -1.0f, 0.0f);
     light.radius = 1.0f;
-    light.power = make_float3(10.0f);
+    light.power = RGB(10.0f);
     light.cos_angle = 0.5f;
 
     const float position_variation = 2.0f;
-    const float3 center_position = light.position + position_variation * light.direction;
+    const Vector3f center_position = light.position + position_variation * light.direction;
 
     for (unsigned int p = 0; p < MAX_POSITION_SAMPLES; ++p) {
-        float3 position = center_position + position_variation * Distributions::Cosine::sample(RNG::sample02(p)).direction;
+        Vector3f position = center_position + position_variation * Bifrost::Math::Distributions::Cosine::sample(Bifrost::Math::RNG::sample02(p)).direction;
         for (float radius : { 1.0f, 4.0f, 13.0f }) {
             light.radius = radius;
             for (float cos_angle : { 0.1f, 0.5f, 0.9f }) {
                 light.cos_angle = cos_angle;
                 for (unsigned int i = 0u; i < MAX_LIGHT_SAMPLES; ++i) {
-                    LightSample sample = LightSources::sample_radiance(light, position, RNG::sample02(i));
+                    LightSample sample = LightSources::sample_radiance(light, position, Bifrost::Math::RNG::sample02(i));
 
                     PDF PDF = LightSources::pdf(light, position, sample.direction_to_light);
                     EXPECT_PDF_EQ_PCT(sample.PDF, PDF, 0.0001f);
 
-                    if (sample.radiance.x > 0.0f) {
-                        float radiance = LightSources::evaluate(light, position, sample.direction_to_light).x;
-                        EXPECT_FLOAT_EQ_EPS(sample.radiance.x, radiance, 0.0001f);
+                    if (sample.radiance.r > 0.0f) {
+                        float radiance = LightSources::evaluate(light, position, sample.direction_to_light).r;
+                        EXPECT_FLOAT_EQ_EPS(sample.radiance.r, radiance, 0.0001f);
                     }
                 }
             }
@@ -60,18 +58,16 @@ GTEST_TEST(SpotLight, consistent_PDF_and_radiance) {
 }
 
 GTEST_TEST(SpotLight, pdf_rejects_rays_that_miss) {
-    using namespace optix;
-
     SpotLight light;
-    light.position = make_float3(0.0f, 10.0f, 0.0f);
-    light.direction = make_float3(0.0f, -1.0f, 0.0f);
+    light.position = Vector3f(0.0f, 10.0f, 0.0f);
+    light.direction = Vector3f(0.0f, -1.0f, 0.0f);
     light.radius = 2.0f;
-    light.power = make_float3(10.0f);
+    light.power = RGB(10.0f);
     light.cos_angle = 0.5f;
 
-    const float3 lit_position = make_float3(0.0f, 0.0f, 0.0f);
-    const float3 hit_light_direction = normalize(make_float3(1.0f, 10.0f, 0.0f));
-    const float3 miss_light_direction = normalize(make_float3(3.0f, 10.0f, 0.0f));
+    const Vector3f lit_position = Vector3f(0.0f, 0.0f, 0.0f);
+    const Vector3f hit_light_direction = normalize(Vector3f(1.0f, 10.0f, 0.0f));
+    const Vector3f miss_light_direction = normalize(Vector3f(3.0f, 10.0f, 0.0f));
 
     PDF hit_light_PDF = LightSources::pdf(light, lit_position, hit_light_direction);
     EXPECT_TRUE(hit_light_PDF.is_valid());
@@ -89,14 +85,12 @@ GTEST_TEST(SpotLight, pdf_rejects_rays_that_miss) {
 }
 
 Bifrost::Math::Statistics<double> estimate_power(SpotLight light, float disk_depth, Bifrost::Math::Vector2f* light_UVs, int light_UV_count) {
-    using namespace optix;
-
-    light.position = make_float3(0, 0, 0);
-    light.direction = make_float3(0, 0, 1);
+    light.position = Vector3f(0, 0, 0);
+    light.direction = Vector3f(0, 0, 1);
 
     // Generate samples on a disk below the light source. The disk should be large enough to cover the illuminated area.
-    float3 disk_normal = -light.direction;
-    float3 disk_center = light.position + disk_depth * light.direction;
+    Vector3f disk_normal = -light.direction;
+    Vector3f disk_center = light.position + disk_depth * light.direction;
     float cos_angle_squared = pow2(light.cos_angle);
     float depth_to_radius = sqrt((1.0f - cos_angle_squared) / cos_angle_squared);
     float disk_radius = depth_to_radius * disk_depth + light.radius;
@@ -105,17 +99,17 @@ Bifrost::Math::Statistics<double> estimate_power(SpotLight light, float disk_dep
     auto radiances = std::vector<float>(disk_sample_count);
     for (int i = 0; i < disk_sample_count; ++i)
     {
-        auto disk_sample = Distributions::Disk::sample(disk_radius, RNG::sample02(i, { 0u, 0u }));
-        float3 disk_position = make_float3(disk_sample.position, 0) + disk_center;
+        auto sample = RNG::sample02(i, { 0u, 0u });
+        auto disk_sample = Bifrost::Math::Distributions::Disk::sample(disk_radius, { sample.x, sample.y });
+        Vector3f disk_position = disk_sample.position + disk_center;
 
         // Accumulate radiance at disk position
         auto sample_radiances = std::vector<float>(light_UV_count);
         for (int j = 0; j < light_UV_count; ++j) {
-            float2 light_UV = make_float2(light_UVs[j].x, light_UVs[j].y);
-            auto light_sample = LightSources::sample_radiance(light, disk_position, light_UV);
+            auto light_sample = LightSources::sample_radiance(light, disk_position, light_UVs[j]);
             if (light_sample.PDF.is_valid()) {
                 float cos_theta = dot(light_sample.direction_to_light, disk_normal);
-                sample_radiances[j] = light_sample.radiance.x * cos_theta / light_sample.PDF.value();
+                sample_radiances[j] = light_sample.radiance.r * cos_theta / light_sample.PDF.value();
             } else
                 sample_radiances[j] = 0.0f;
         }
@@ -128,42 +122,38 @@ Bifrost::Math::Statistics<double> estimate_power(SpotLight light, float disk_dep
 }
 
 GTEST_TEST(SpotLight, power_preservation_when_radius_changes) {
-    using namespace optix;
-
     const unsigned int MAX_LIGHT_SAMPLES = 256u;
     Bifrost::Math::Vector2f UVs[MAX_LIGHT_SAMPLES];
     Bifrost::Math::RNG::fill_progressive_multijittered_bluenoise_samples(UVs, UVs + MAX_LIGHT_SAMPLES);
 
     SpotLight light;
-    light.position = make_float3(0, 0, 0);
-    light.direction = make_float3(0, 0, 1);
-    light.power = make_float3(1, 1, 1);
+    light.position = Vector3f(0, 0, 0);
+    light.direction = Vector3f(0, 0, 1);
+    light.power = RGB(1, 1, 1);
     light.cos_angle = 0.5f;
 
     for (float radius : { 0.0f, 1.0f, 2.0f, 4.0f }) {
         light.radius = radius;
         auto power_statistics = estimate_power(light, 1, UVs, MAX_LIGHT_SAMPLES);
-        EXPECT_FLOAT_EQ_EPS(light.power.x, (float)power_statistics.mean(), 0.0025f);
+        EXPECT_FLOAT_EQ_EPS(light.power.r, (float)power_statistics.mean(), 0.0025f);
     }
 }
 
 GTEST_TEST(SpotLight, power_preservation_when_angle_changes) {
-    using namespace optix;
-
     const unsigned int MAX_LIGHT_SAMPLES = 256u;
     Bifrost::Math::Vector2f UVs[MAX_LIGHT_SAMPLES];
     Bifrost::Math::RNG::fill_progressive_multijittered_bluenoise_samples(UVs, UVs + MAX_LIGHT_SAMPLES);
 
     SpotLight light;
-    light.position = make_float3(0, 0, 0);
-    light.direction = make_float3(0, 0, 1);
-    light.power = make_float3(1, 1, 1);
+    light.position = Vector3f(0, 0, 0);
+    light.direction = Vector3f(0, 0, 1);
+    light.power = RGB(1, 1, 1);
     light.radius = 0.25f;
 
     for (float cos_angle : { 0.3f, 0.5f, 0.7f }) {
         light.cos_angle = cos_angle;
         auto power_statistics = estimate_power(light, 1, UVs, MAX_LIGHT_SAMPLES);
-        EXPECT_FLOAT_EQ_EPS(light.power.x, (float)power_statistics.mean(), 0.0045f);
+        EXPECT_FLOAT_EQ_EPS(light.power.r, (float)power_statistics.mean(), 0.0045f);
     }
 }
 
