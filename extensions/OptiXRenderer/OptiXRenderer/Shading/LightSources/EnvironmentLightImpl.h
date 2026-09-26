@@ -73,7 +73,7 @@ __inline_dev__ LightSample sample_radiance(const EnvironmentLight& light, optix:
     LightSample sample;
     sample.direction_to_light = to_vector3f(latlong_texcoord_to_direction(uv));
     sample.distance = 1e30f;
-    sample.radiance = to_rgb(light.get_tint() * optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y)));
+    sample.radiance = light.get_tint() * to_rgb(optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y)));
     float sin_theta = sqrtf(1.0f - sample.direction_to_light.y * sample.direction_to_light.y);
     float PDF = optix::rtTex2D<float>(light.per_pixel_PDF_ID, uv.x, uv.y) / sin_theta;
     sample.PDF = sin_theta == 0.0f ? 0.0f : PDF;
@@ -89,13 +89,13 @@ __inline_dev__ PDF pdf(const EnvironmentLight& light, optix::float3 direction_to
     return sin_theta == 0.0f ? PDF::delta_dirac(0) : PDF;
 }
 
-__inline_dev__ optix::float3 evaluate(const EnvironmentLight& light, optix::float3 direction_to_light) {
+__inline_dev__ RGB evaluate(const EnvironmentLight& light, optix::float3 direction_to_light) {
     optix::float2 uv = direction_to_latlong_texcoord(direction_to_light);
-    return light.get_tint() * optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y));
+    return light.get_tint() * to_rgb(optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y)));
 }
 
 __inline_dev__ LightResponse evaluate_with_PDF(const EnvironmentLight& light, optix::float3 direction_to_light) {
-    return { to_rgb(evaluate(light, direction_to_light)), pdf(light, direction_to_light) };
+    return { evaluate(light, direction_to_light), pdf(light, direction_to_light) };
 }
 
 } // NS OptiXRenderer::LightSources
