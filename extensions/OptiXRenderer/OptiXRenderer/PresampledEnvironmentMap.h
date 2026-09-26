@@ -33,10 +33,10 @@ public:
     // Constructors and destructor.
     //---------------------------------------------------------------------------------------------
     PresampledEnvironmentMap() = default;
-    PresampledEnvironmentMap(optix::float3 tint)
+    PresampledEnvironmentMap(RGB tint)
         : m_environment_map(Bifrost::Assets::Texture::invalid())
         , m_per_pixel_PDF(nullptr), m_samples(nullptr), m_light(PresampledEnvironmentLight::empty(tint)) {}
-    PresampledEnvironmentMap(optix::Context& context, const Bifrost::Assets::InfiniteAreaLight& light, optix::float3 tint,
+    PresampledEnvironmentMap(optix::Context& context, const Bifrost::Assets::InfiniteAreaLight& light, RGB tint,
                              optix::TextureSampler environment_sampler, unsigned int sample_count = 8192);
 
     PresampledEnvironmentMap& operator=(PresampledEnvironmentMap&& rhs) {
@@ -49,7 +49,7 @@ public:
 
     ~PresampledEnvironmentMap();
 
-    inline void set_tint(optix::float3 tint) { m_light.tint = tint; }
+    inline void set_tint(RGB tint) { m_light.tint = tint; }
 
     //---------------------------------------------------------------------------------------------
     // Getters.

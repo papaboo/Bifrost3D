@@ -1122,20 +1122,18 @@ struct Renderer::Implementation {
             for (SceneRoot scene_data : SceneRoots::get_changed_scenes()) {
                 if (scene_data.get_changes().contains(SceneRoots::Change::Destroyed))
                 {
-                    float3 black = {0, 0, 0};
 #if PRESAMPLE_ENVIRONMENT_MAP
-                    scene.environment = PresampledEnvironmentMap(black);
+                    scene.environment = PresampledEnvironmentMap(RGB::black());
                     scene.GPU_state.environment_light = scene.environment.get_light().presampled_environment;
 #else
-                    scene.environment = EnvironmentMap(black);
+                    scene.environment = EnvironmentMap(RGB::black());
                     scene.GPU_state.environment_light = scene.environment.get_light().environment;
 #endif
                     should_reset_accumulations = true;
                     continue;
                 }
 
-                Math::RGB _env_tint = scene_data.get_environment_tint();
-                float3 env_tint = make_float3(_env_tint.r, _env_tint.g, _env_tint.b);
+                Math::RGB env_tint = scene_data.get_environment_tint();
                 if (scene_data.get_changes().any_set(SceneRoots::Change::EnvironmentTint, SceneRoots::Change::Created)) {
                     scene.environment.set_tint(env_tint);
                     scene.GPU_state.environment_light.set_tint(env_tint);
