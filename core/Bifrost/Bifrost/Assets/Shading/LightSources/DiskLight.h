@@ -15,6 +15,7 @@
 #include <Bifrost/Math/Disk.h>
 
 #ifndef GPU_COMPILATION
+#include <Bifrost/Assets/Shading/LightSources/LtcAreaLight.h>
 #include <sstream>
 #endif
 
@@ -128,6 +129,34 @@ public:
 
         return { get_emitted_radiance(), PDF };
     }
+
+#ifndef GPU_COMPILATION
+    _inline_all_archs_ Math::RGB evaluate(Math::IsotropicLTC ltc_bsdf_model, Math::Vector3f wo, Math::Vector3f lit_position, Math::Vector3f lit_surface_normal) const {
+        using namespace Bifrost::Math;
+
+        // Reject points behind the light here, early in the pipeline, and avoid all the transformations in the evaluation code.
+        Vector3f direction_to_v0 = m_surface.center - lit_position;
+        float signed_distance_to_plane = dot(direction_to_v0, m_surface.normal);
+        bool lit_position_in_plane = signed_distance_to_plane == 0.0f;
+        bool lit_position_behind = signed_distance_to_plane >= 0.0f;
+        if (lit_position_in_plane || (!m_is_two_sided && lit_position_behind))
+            return RGB::black();
+
+        // Compute control points on disk
+        Vector3f tangent, bitangent;
+        compute_tangents(m_surface.normal, tangent, bitangent);
+        Vector3f disk_control_points[3] = { m_surface.center, tangent * -m_surface.radius, bitangent * m_surface.radius };
+
+        float disk_light_integral = LtcAreaLight::evaluate_disk_light(ltc_bsdf_model, wo, lit_position, lit_surface_normal, disk_control_points, true);
+        return get_emitted_radiance() * disk_light_integral;
+    }
+
+    _inline_all_archs_ Math::RGB evaluate_radiance(Math::Vector3f wo, Math::Vector3f lit_position, Math::Vector3f lit_surface_normal) const {
+        Math::RGB lambertian_reflectance = evaluate(Math::IsotropicLTC::identity(), wo, lit_position, lit_surface_normal);
+        // Multiply by PI to remove the effect of the lambertian surface and get radiance
+        return lambertian_reflectance * PIf;
+    }
+#endif
 
 #ifndef GPU_COMPILATION
     inline std::string to_string() const {
