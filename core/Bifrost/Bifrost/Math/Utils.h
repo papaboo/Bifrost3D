@@ -106,6 +106,10 @@ _inline_all_archs_ T clamp01(const T value) {
     return min(max(value, T(0)), T(1));
 }
 
+// Clamps the input to the sqrt function to 0.
+// This should be used if v is mathematically never supposed to become negative, but floating point precision can push it below 0.
+_inline_all_archs_ float safe_sqrt(float v) { return sqrt(max(0.0f, v)); }
+
 // Finds the smallest power of 2 greater or equal to x.
 _inline_all_archs_ unsigned int next_power_of_two(unsigned int x) {
     --x;
