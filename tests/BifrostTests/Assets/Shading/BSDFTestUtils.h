@@ -190,7 +190,7 @@ inline RGB integrate_light_over_surface(Vector3f wo, Vector3f world_surface_poin
             float abs_cos_theta_i = abs(shading_wi.z);
 
             RGB contribution = light_sample.radiance * bsdf_response.reflectance * abs_cos_theta_i / light_sample.PDF.value();
-            float mis_weight = MonteCarlo::balance_heuristic(light_sample.PDF, bsdf_response.PDF);
+            float mis_weight = light_sample.PDF.is_delta_dirac() ? 1.0f : MonteCarlo::balance_heuristic(light_sample.PDF, bsdf_response.PDF);
             monte_carlo_estimation += contribution * mis_weight;
         }
     }
@@ -207,7 +207,7 @@ inline RGB integrate_light_over_surface(Vector3f wo, Vector3f world_surface_poin
             float abs_cos_theta_i = abs(bsdf_sample.direction.z);
 
             RGB contribution = light_response.radiance * bsdf_sample.reflectance * abs_cos_theta_i / bsdf_sample.PDF.value();
-            float mis_weight = MonteCarlo::balance_heuristic(bsdf_sample.PDF, light_response.PDF);
+            float mis_weight = bsdf_sample.PDF.is_delta_dirac() ? 1.0f : MonteCarlo::balance_heuristic(bsdf_sample.PDF, light_response.PDF);
             monte_carlo_estimation += contribution * mis_weight;
         }
     }
