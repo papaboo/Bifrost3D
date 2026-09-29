@@ -15,6 +15,7 @@
 #include <Bifrost/Math/Disk.h>
 
 #ifndef GPU_COMPILATION
+#include <Bifrost/Assets/Shading/LightSources/LtcAreaLight.h>
 #include <sstream>
 #endif
 
@@ -128,6 +129,42 @@ public:
 
         return { get_emitted_radiance(), PDF };
     }
+
+#ifndef GPU_COMPILATION
+    _inline_all_archs_ Math::RGB evaluate(Math::IsotropicLTC ltc_bsdf_model, Math::Vector3f wo, Math::Vector3f lit_position, Math::Vector3f lit_surface_normal) const {
+        using namespace Bifrost::Math;
+
+        // Reject points behind the light here, early in the pipeline, and avoid the transformations in the evaluation code.
+        Vector3f direction_to_v0 = m_surface.center - lit_position;
+        float signed_distance_to_plane = dot(direction_to_v0, m_surface.normal);
+        bool lit_position_in_plane = signed_distance_to_plane == 0.0f;
+        bool lit_position_behind = signed_distance_to_plane >= 0.0f;
+        if (lit_position_in_plane || (!m_is_two_sided && lit_position_behind))
+            return RGB::black();
+
+        if (is_delta_light()) {
+            float distance_to_light_squared = magnitude_squared(direction_to_v0);
+            Vector3f direction_to_light = direction_to_v0 / sqrt(distance_to_light_squared);
+            float abs_cos_theta_light = abs(dot(direction_to_light, m_surface.normal));
+
+            RGB radiance = m_power * abs_cos_theta_light / (PIf * distance_to_light_squared);
+            radiance *= m_is_two_sided ? 0.5f : 1.0f;
+
+            Matrix3x3f world_to_shading = LtcAreaLight::ltc_shading_space(wo, lit_surface_normal);
+            return radiance * ltc_bsdf_model.evaluate(world_to_shading * direction_to_light);
+        }
+
+        auto disk_control_points = LtcAreaLight::DiskControlPoints(m_surface);
+        float disk_light_integral = LtcAreaLight::evaluate_disk_light(ltc_bsdf_model, wo, lit_position, lit_surface_normal, disk_control_points, true);
+        return get_emitted_radiance() * disk_light_integral;
+    }
+
+    _inline_all_archs_ Math::RGB evaluate_radiance(Math::Vector3f wo, Math::Vector3f lit_position, Math::Vector3f lit_surface_normal) const {
+        Math::RGB lambertian_reflectance = evaluate(Math::IsotropicLTC::identity(), wo, lit_position, lit_surface_normal);
+        // Multiply by PI to remove the effect of the lambertian surface and get radiance
+        return lambertian_reflectance * PIf;
+    }
+#endif
 
 #ifndef GPU_COMPILATION
     inline std::string to_string() const {

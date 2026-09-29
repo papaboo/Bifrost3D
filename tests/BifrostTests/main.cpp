@@ -16,6 +16,7 @@
 #include <Assets/Shading/LightSources/AreaLightsTest.h>
 #include <Assets/Shading/LightSources/DirectionalLightTest.h>
 #include <Assets/Shading/LightSources/DiskLightTest.h>
+#include <Assets/Shading/LightSources/DiskLightLTCTest.h>
 #include <Assets/Shading/LightSources/SphereLightTest.h>
 #include <Assets/Shading/LightSources/TriangleLightTest.h>
 #include <Assets/Shading/LightSources/TriangleLightLTCTest.h>
