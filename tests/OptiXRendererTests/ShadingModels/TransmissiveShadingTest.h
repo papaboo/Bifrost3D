@@ -24,7 +24,7 @@ namespace OptiXRenderer {
 
 Material smooth_glass_parameters() {
     Material glass_params = {};
-    glass_params.tint = optix::make_float3(0.95f, 0.97f, 0.95f);
+    glass_params.tint = RGB(0.95f, 0.97f, 0.95f);
     glass_params.roughness = 0.0f;
     glass_params.metallic = 0.0f;
     glass_params.specularity = 0.04f;
@@ -49,12 +49,12 @@ public:
 
     BSDFSample sample(optix::float3 wo, optix::float3 random_sample) const { return m_shading_model.sample(wo, random_sample); }
 
-    optix::float3 rho(float abs_cos_theta_wi) const { return m_shading_model.rho(abs_cos_theta_wi); }
+    RGB rho(float abs_cos_theta_wi) const { return m_shading_model.rho(abs_cos_theta_wi); }
 
     std::string to_string() const {
         std::ostringstream out;
         out << "Glass shading:" << std::endl;
-        out << "  Tint: " << m_material_params.tint.x << ", " << m_material_params.tint.y << ", " << m_material_params.tint.z << std::endl;
+        out << "  Tint: " << m_material_params.tint.r << ", " << m_material_params.tint.g << ", " << m_material_params.tint.b << std::endl;
         out << "  Roughness:" << m_material_params.roughness << std::endl;
         out << "  Specularity:" << m_material_params.specularity << std::endl;
         return out.str();
@@ -69,17 +69,17 @@ GTEST_TEST(TransmissiveShadingModel, directional_hemispherical_reflectance_estim
     // Test albedo is properly estimated.
     static auto test_albedo = [](float3 wo, float roughness) {
         Material material_params = {};
-        material_params.tint = make_float3(1.0f, 0.5f, 0.25f);
+        material_params.tint = RGB(1.0f, 0.5f, 0.25f);
         material_params.roughness = roughness;
         material_params.specularity = 0.04f;
         auto shading_model = TransmissiveShadingWrapper(material_params, wo.z);
 
-        float3 expected_rho = ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo, 16384u).reflectance;
-        float3 actual_rho = shading_model.rho(wo.z);
+        RGB expected_rho = to_rgb(ShadingModelTestUtils::directional_hemispherical_reflectance_function(shading_model, wo, 16384u).reflectance);
+        RGB actual_rho = shading_model.rho(wo.z);
 
         // The error is slightly higher for low roughness materials.
         float error_percentage = 0.015f * (2 - roughness);
-        EXPECT_FLOAT3_EQ_PCT(expected_rho, actual_rho, error_percentage) << shading_model.to_string();
+        EXPECT_RGB_EQ_PCT(expected_rho, actual_rho, error_percentage) << shading_model.to_string();
     };
 
     const float3 incident_wo = make_float3(0.0f, 0.0f, 1.0f);
@@ -97,7 +97,7 @@ GTEST_TEST(TransmissiveShadingModel, white_hot_furnace) {
 
     // A white material
     Material material_params = {};
-    material_params.tint = optix::make_float3(1.0f, 1.0f, 1.0f);
+    material_params.tint = RGB(1.0f, 1.0f, 1.0f);
 
     for (float medium_IOR : { Rho::dielectric_GGX_minimum_IOR_into_dense_medium, 1.5f, Rho::dielectric_GGX_maximum_IOR_into_dense_medium }) {
         material_params.specularity = dielectric_specularity(1.0f, medium_IOR);

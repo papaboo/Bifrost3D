@@ -47,12 +47,10 @@ set(SHADING_SRC
 )
 
 set(SHADING_LIGHTSOURCES_SRC
-  OptiXRenderer/Shading/LightSources/DirectionalLightImpl.h
   OptiXRenderer/Shading/LightSources/EnvironmentLightImpl.h
   OptiXRenderer/Shading/LightSources/LightImpl.h
   OptiXRenderer/Shading/LightSources/LightSources.cu
   OptiXRenderer/Shading/LightSources/PresampledEnvironmentLightImpl.h
-  OptiXRenderer/Shading/LightSources/SphereLightImpl.h
   OptiXRenderer/Shading/LightSources/SpotLightImpl.h
 )
 
