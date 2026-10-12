@@ -38,8 +38,9 @@ cbuffer material : register(b3) {
 StructuredBuffer<MeshLight> mesh_lights : register(t11);
 
 cbuffer lights : register(b12) {
-    int light_count;
-    int3 _padding;
+    int delta_light_count;
+    int total_light_count;
+    int2 _padding;
     LightData light_data[12];
 }
 
@@ -98,23 +99,27 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
     // Apply IBL
     radiance += scene_vars.environment_tint.rgb * shading_model.evaluate_IBL(world_wo, world_normal, ambient_visibility);
 
-    // Apply analytical light sources
-    for (int l = 0; l < light_count; ++l) {
-        LightData light = light_data[l];
+    // Apply analytical delta light sources.
+    for (int delta_l = 0; delta_l < delta_light_count; ++delta_l) {
+        LightData light = light_data[delta_l];
 
-        bool is_sphere_light = light.type() == LightType::Sphere && light.sphere_radius() > 0.0f;
+        LightSample light_sample = sample_light(light, input.world_position);
+        float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
+        float3 f = shading_model.evaluate(wo, wi);
+        radiance += f * light_sample.radiance * abs(wi.z);
+    }
+
+    // Apply analytical area light sources.
+    for (int area_l = delta_light_count; area_l < total_light_count; ++area_l) {
+        LightData light = light_data[area_l];
+
+        bool is_sphere_light = light.type() == LightType::Sphere;
         if (is_sphere_light) {
             // Compute sphere light position in shading space
             SphereLight sphere_light = light.sphere_light();
             sphere_light.position = mul(world_to_shading_TBN, sphere_light.position - input.world_position);
 
             radiance += shading_model.evaluate_sphere_light(wo, sphere_light, ambient_visibility);
-        } else {
-            // Apply regular delta lights.
-            LightSample light_sample = sample_light(light, input.world_position);
-            float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
-            float3 f = shading_model.evaluate(wo, wi);
-            radiance += f * light_sample.radiance * abs(wi.z);
         }
     }
 
