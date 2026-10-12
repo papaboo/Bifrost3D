@@ -12,6 +12,7 @@
 
 #pragma warning(disable: 4244) // Disable double to float warning
 
+#include <Bifrost/Assets/Shading/Constants.h>
 #include <Bifrost/Assets/Shading/Utils.h>
 #include <Bifrost/Math/Color.h>
 #include <Bifrost/Math/Distributions.h>
