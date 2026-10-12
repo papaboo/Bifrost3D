@@ -358,7 +358,7 @@ struct Dx11SphereLight {
     float radius;
 };
 
-struct Dx11SpotLight {
+struct Dx11DiskLight {
     float3 power;
     float3 position;
     float radius;
@@ -371,7 +371,7 @@ struct Dx11Light{
         None = 0u,
         Sphere = 1u,
         Directional = 2u,
-        Spot = 3u,
+        Disk = 3u,
         TypeMask = 3u
     };
 
@@ -380,7 +380,7 @@ struct Dx11Light{
     union {
         Dx11DirectionalLight directional;
         Dx11SphereLight sphere;
-        Dx11SpotLight spot;
+        Dx11DiskLight disk;
     };
 
     static Dx11Light none() {

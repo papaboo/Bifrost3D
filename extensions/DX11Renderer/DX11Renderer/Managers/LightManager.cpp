@@ -36,24 +36,46 @@ Dx11Light light_creation(LightSource light) {
         gpu_light.sphere.radius = host_light.get_radius();
         break;
     }
-    case LightSources::Type::Spot: {
+    case LightSources::Type::Disk: {
+        DiskLight host_light = light;
+        Transform global_transform = host_light.get_node().get_global_transform();
+
+        gpu_light.flags = Dx11Light::Disk;
+
+        Vector3f position = global_transform.translation;
+        memcpy(&gpu_light.disk.position, &position, sizeof(gpu_light.sphere.position));
+
+        RGB power = host_light.get_power();
+        memcpy(&gpu_light.disk.power, &power, sizeof(gpu_light.sphere.power));
+
+        gpu_light.disk.radius = host_light.get_radius();
+
+        gpu_light.disk.cos_angle = 0.0f;
+
+        Vector3f direction = global_transform.rotation.forward();
+        memcpy(&gpu_light.disk.direction, &direction, sizeof(gpu_light.disk.direction));
+
+        break;
+    }
+    case LightSources::Type::Spot:
+    {
         SpotLight host_light = light;
         Transform global_transform = host_light.get_node().get_global_transform();
 
-        gpu_light.flags = Dx11Light::Spot;
+        gpu_light.flags = Dx11Light::Disk;
 
         Vector3f position = global_transform.translation;
-        memcpy(&gpu_light.spot.position, &position, sizeof(gpu_light.sphere.position));
+        memcpy(&gpu_light.disk.position, &position, sizeof(gpu_light.sphere.position));
 
         RGB power = host_light.get_power();
-        memcpy(&gpu_light.spot.power, &power, sizeof(gpu_light.sphere.power));
+        memcpy(&gpu_light.disk.power, &power, sizeof(gpu_light.sphere.power));
 
-        gpu_light.spot.radius = host_light.get_radius();
+        gpu_light.disk.radius = host_light.get_radius();
 
-        gpu_light.spot.cos_angle = host_light.get_cos_angle();
+        gpu_light.disk.cos_angle = host_light.get_cos_angle();
 
         Vector3f direction = global_transform.rotation.forward();
-        memcpy(&gpu_light.spot.direction, &direction, sizeof(gpu_light.spot.direction));
+        memcpy(&gpu_light.disk.direction, &direction, sizeof(gpu_light.disk.direction));
 
         break;
     }
