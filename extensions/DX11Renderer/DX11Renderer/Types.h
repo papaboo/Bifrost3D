@@ -383,6 +383,11 @@ struct Dx11Light{
         Dx11SpotLight spot;
     };
 
+    static Dx11Light none() {
+        Dx11Light light = {}; // Set flags to None as well.
+        return light;
+    }
+
     unsigned int get_type() const { return (Flags)(unsigned int)flags; }
     bool is_type(Flags light_type) { return get_type() == light_type; }
 };

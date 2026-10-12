@@ -21,23 +21,19 @@ namespace DX11Renderer::Managers {
 // Light manager.
 // Collects the light sources into a tight array of active lights 
 // and maintains their GPU representation.
-// Future work.
-// * Support an arbitrary light count. (Maximum of what fits in a constant buffer would work)
-// * Support tiled forward rendering.
 //----------------------------------------------------------------------------
 class LightManager {
-    static const unsigned int MAX_LIGHTS = 12;
+    static const unsigned int MAX_LIGHT_COUNT = 12;
 
 private:
-    Bifrost::Core::Array<unsigned int> m_ID_to_index;
-    Bifrost::Core::Array<Bifrost::Scene::LightSourceID> m_index_to_ID;
-
     struct LightBuffer {
         int active_count;
         Bifrost::Math::Vector3i _padding;
-        Dx11Light lights[MAX_LIGHTS];
+        Dx11Light lights[MAX_LIGHT_COUNT];
     } m_data;
     OBuffer m_lights_buffer;
+
+    Bifrost::Core::Array<Dx11Light> m_lights;
 
 public:
     LightManager() {
@@ -45,7 +41,7 @@ public:
         m_lights_buffer = nullptr;
     }
 
-    LightManager(ID3D11Device1& device, unsigned int initial_capacity);
+    LightManager(ID3D11Device1& device);
 
     inline int active_light_count() const { return m_data.active_count; }
     inline ID3D11Buffer** light_buffer_addr() { return &m_lights_buffer; }
