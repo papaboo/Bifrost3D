@@ -97,7 +97,8 @@ Dx11Light light_creation(LightSource light) {
 }
 
 LightManager::LightManager(ID3D11Device1& device) {
-    m_data.active_count = 0u;
+    m_data.active_delta_light_count = 0u;
+    m_data.active_total_light_count = 0u;
     m_lights = Array<Dx11Light>(MAX_LIGHT_COUNT);
     for (int i = 0; i < m_lights.size(); ++i)
         m_lights[i] = Dx11Light::none();
@@ -130,16 +131,25 @@ void LightManager::handle_updates(ID3D11DeviceContext1& device_context) {
             m_lights[valid_light_index] = light_creation(light);
     }
 
-    // Loop over all lights and gather active lights into the DX11 buffer
-    m_data.active_count = 0;
+    // Loop over all lights and gather active lights into two buffers.
+    // Use the dx resource buffer for delta lights and a scratch buffer for area lights.
+    m_data.active_delta_light_count = 0;
+    unsigned int active_area_light_count = 0;
     unsigned int max_active_light_count = min(m_lights.size(), LightSources::capacity());
+    Dx11Light area_lights[MAX_LIGHT_COUNT];
     for (int i = 0; i < max_active_light_count; ++i) {
         if (m_lights[i].get_type() == Dx11Light::None)
             continue;
 
-        m_data.lights[m_data.active_count] = m_lights[i];
-        ++m_data.active_count;
+        if (m_lights[i].is_area_light())
+            area_lights[active_area_light_count++] = m_lights[i];
+        else
+            m_data.lights[m_data.active_delta_light_count++] = m_lights[i];
     }
+
+    // Copy area lights to the DX11 light resource buffer
+    memcpy(m_data.lights + m_data.active_delta_light_count, area_lights, sizeof(Dx11Light) * active_area_light_count);
+    m_data.active_total_light_count = m_data.active_delta_light_count + active_area_light_count;
 
     device_context.UpdateSubresource(m_lights_buffer, 0, nullptr, &m_data, 0, 0);
 }
