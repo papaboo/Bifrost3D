@@ -9,6 +9,7 @@
 #ifndef _BIFROST_ASSETS_SHADING_BSDFS_LAMBERT_H_
 #define _BIFROST_ASSETS_SHADING_BSDFS_LAMBERT_H_
 
+#include <Bifrost/Assets/Shading/Constants.h>
 #include <Bifrost/Assets/Shading/Utils.h>
 #include <Bifrost/Math/Distributions.h>
 

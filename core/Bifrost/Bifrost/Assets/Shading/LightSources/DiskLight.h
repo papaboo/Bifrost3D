@@ -10,6 +10,7 @@
 #define _BIFROST_ASSETS_SHADING_LIGHTSOURCES_DISK_LIGHT_H_
 
 #include <Bifrost/Assets/Shading/LightSources/SphereLight.h>
+#include <Bifrost/Assets/Shading/Constants.h>
 #include <Bifrost/Assets/Shading/Utils.h>
 #include <Bifrost/Math/Distributions.h>
 #include <Bifrost/Math/Disk.h>
