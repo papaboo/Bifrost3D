@@ -388,8 +388,13 @@ struct Dx11Light{
         return light;
     }
 
-    unsigned int get_type() const { return (Flags)(unsigned int)flags; }
-    bool is_type(Flags light_type) { return get_type() == light_type; }
+    Flags get_type() const { return Flags((unsigned int)flags & TypeMask); }
+    bool is_type(Flags light_type) const { return get_type() == light_type; }
+
+    bool is_area_light() {
+        Flags type = get_type();
+        return (type == Sphere && sphere.radius > 0.0f) || (type == Disk && disk.radius > 0.0f);
+    }
 };
 
 } // NS DX11Renderer

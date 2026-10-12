@@ -19,16 +19,18 @@ namespace DX11Renderer::Managers {
 
 //----------------------------------------------------------------------------
 // Light manager.
-// Collects the light sources into a tight array of active lights 
-// and maintains their GPU representation.
+// Collects the light sources into a tight array of active lights and maintains their GPU representation.
+// The buffer splits delta and area lights into their own parts of the buffer,
+// such that the delta lights are in the first part of the buffer and the area lights in the last.
 //----------------------------------------------------------------------------
 class LightManager {
     static const unsigned int MAX_LIGHT_COUNT = 12;
 
 private:
     struct LightBuffer {
-        int active_count;
-        Bifrost::Math::Vector3i _padding;
+        int active_delta_light_count;
+        int active_total_light_count;
+        Bifrost::Math::Vector2i _padding;
         Dx11Light lights[MAX_LIGHT_COUNT];
     } m_data;
     OBuffer m_lights_buffer;
@@ -37,13 +39,13 @@ private:
 
 public:
     LightManager() {
-        m_data.active_count = 0u;
+        m_data.active_total_light_count = 0u;
         m_lights_buffer = nullptr;
     }
 
     LightManager(ID3D11Device1& device);
 
-    inline int active_light_count() const { return m_data.active_count; }
+    inline int active_light_count() const { return m_data.active_total_light_count; }
     inline ID3D11Buffer** light_buffer_addr() { return &m_lights_buffer; }
 
     void handle_updates(ID3D11DeviceContext1& device_context);
