@@ -294,7 +294,7 @@ GTEST_TEST(MaterialManager, sample_GPU_GGX_LTC_texture_consistent_with_CPU) {
 
     // Upload rho texture and bilinear sampler
     auto GGX_LTC_fit_srv = MaterialManager::create_GGX_LTC_fit_srv(device);
-    context->CSSetShaderResources(13, 1, &GGX_LTC_fit_srv);
+    context->CSSetShaderResources(SrvRegisters::GgxLtcFit, 1, &GGX_LTC_fit_srv);
     auto bilinear_sampler = TextureManager::create_clamped_linear_sampler(device);
     context->CSSetSamplers(15, 1, &bilinear_sampler);
 

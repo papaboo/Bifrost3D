@@ -314,7 +314,7 @@ public:
         }
 
         { // Setup lights
-            m_lights.manager = LightManager(m_device, LightSources::capacity());
+            m_lights.manager = LightManager(m_device);
 
             // Sphere light visualization shaders.
             OBlob vertex_shader_blob = m_shader_manager.compile_shader_from_file("SphereLight.hlsl", "vs_5_0", "vs");
