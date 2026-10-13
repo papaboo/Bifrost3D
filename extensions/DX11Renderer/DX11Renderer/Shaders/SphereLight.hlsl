@@ -77,7 +77,7 @@ Varyings vs(uint primitive_ID : SV_VertexID) {
     output.position = mul(output.world_position, scene_vars.view_projection_matrix);
     output.world_position.w = light.radius;
 
-    output.radiance = light.radiance();
+    output.radiance = light.emitted_radiance();
 
     return output;
 }

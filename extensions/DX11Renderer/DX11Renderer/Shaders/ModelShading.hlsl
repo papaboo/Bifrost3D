@@ -109,23 +109,15 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
         radiance += f * light_sample.radiance * abs(wi.z);
     }
 
+    ShadingModels::BsdfLtcStack bsdf_ltcs = shading_model.get_LTC_representation(abs(wo.z));
+
     // Apply analytical area light sources.
     for (int area_l = delta_light_count; area_l < total_light_count; ++area_l) {
-        LightData light = light_data[area_l];
-
-        bool is_sphere_light = light.type() == LightType::Sphere;
-        if (is_sphere_light) {
-            // Compute sphere light position in shading space
-            SphereLight sphere_light = light.sphere_light();
-            sphere_light.position = mul(world_to_shading_TBN, sphere_light.position - input.world_position);
-
-            radiance += shading_model.evaluate_sphere_light(wo, sphere_light, ambient_visibility);
-        }
+        LightData area_light = light_data[area_l];
+        radiance += ShadingModels::evaluate_area_light(area_light, bsdf_ltcs, world_wo, input.world_position, world_normal);
     }
 
     // Apply mesh lights
-    ShadingModels::BsdfLtcStack bsdf_ltcs = shading_model.get_LTC_representation(abs(wo.z));
-
     uint mesh_light_count, mesh_light_size;
     mesh_lights.GetDimensions(mesh_light_count, mesh_light_size);    
     for (uint ml = 0; ml < mesh_light_count; ++ml) {
