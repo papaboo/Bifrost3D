@@ -147,6 +147,7 @@ float3 schlick_fresnel(float3 incident_specular, float abs_cos_theta) {
     float t = pow5(1.0 - abs_cos_theta);
     return (1 - t) * incident_specular + t;
 }
+float safe_sqrt(float v) { return sqrt(max(0, v)); }
 
 float2 direction_to_latlong_texcoord(float3 direction) {
     float u = (atan2(direction.z, direction.x) + PI) * 0.5f * RECIP_PI;
