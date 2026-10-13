@@ -11,6 +11,7 @@
 
 #include <BSDFs/Diffuse.hlsl>
 #include <BSDFs/GGX.hlsl>
+#include <ShadingModels/EvaluateAreaLights.hlsl>
 #include <ShadingModels/IShadingModel.hlsl>
 #include <ShadingModels/Utils.hlsl>
 #include <Utils.hlsl>
@@ -141,24 +142,6 @@ struct DefaultShading : IShadingModel {
         if (m_coat_scale > 0)
             reflectance += m_coat_scale * BSDFs::GGX::evaluate(m_coat_alpha, COAT_SPECULARITY, wo, wi);
         return reflectance;
-    }
-
-    // Evaluate the material lit by a sphere light.
-    // Uses evaluation by most representative point internally.
-    float3 evaluate_sphere_light(float3 wo, SphereLight light, float ambient_visibility) {
-        // Return no contribution if seen or lit from the backside.
-        bool light_below_surface = light.position.z < -light.radius;
-        if (wo.z <= 0.0f || light_below_surface)
-            return float3(0, 0, 0);
-
-        float3 light_radiance = light.power * rcp(4.0f * PI * dot(light.position, light.position));
-
-        float3 radiance = evaluate_sphere_light_lambert(light, light_radiance, wo, m_diffuse_tint, ambient_visibility);
-        radiance += m_specular_scale * evaluate_sphere_light_GGX(light, light_radiance, wo, m_specularity, specular_alpha(), ambient_visibility);
-        if (m_coat_scale > 0)
-            radiance += m_coat_scale * evaluate_sphere_light_GGX(light, light_radiance, wo, COAT_SPECULARITY, m_coat_alpha, ambient_visibility);
-
-        return radiance;
     }
 
     // Evaluate the material lit by an IBL.
