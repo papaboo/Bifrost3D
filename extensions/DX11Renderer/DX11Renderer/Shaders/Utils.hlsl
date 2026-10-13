@@ -82,6 +82,12 @@ struct IsotropicLTC {
     float3x3 get_M() { return invert_matrix(e00, e11, e22, e02, e20); }
     float inverse_M_determinant() { return e11 * (e00 * e22 - e02 * e20); }
 
+    // Roughness of the LTC matrix is the elements e00 and e11 in the M matrix, normalized such that e22 = 1.
+    // See figure 2 in the paper.
+    float get_roughness_u() { return e22 / e00; }
+    float get_roughness_v() { return (e00 * e22 - e02 * e20) / (e00 * e11); }
+    float get_roughness() { return 0.5 * (get_roughness_u() + get_roughness_v()); }
+
     // Specialized 3x3 matrix inversion for diagonal cross matrices.
     static float3x3 invert_matrix(float e00, float e11, float e22, float e02, float e20) {
         // As all non-zero elements are scaled by e11, we inline that into the precomputed determinant.
@@ -147,6 +153,7 @@ float3 schlick_fresnel(float3 incident_specular, float abs_cos_theta) {
     float t = pow5(1.0 - abs_cos_theta);
     return (1 - t) * incident_specular + t;
 }
+float safe_sqrt(float v) { return sqrt(max(0, v)); }
 
 float2 direction_to_latlong_texcoord(float3 direction) {
     float u = (atan2(direction.z, direction.x) + PI) * 0.5f * RECIP_PI;
