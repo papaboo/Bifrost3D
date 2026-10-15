@@ -517,7 +517,28 @@ inline RGB parse_RGB(const char* const rgb_str) {
     return RGB(vec.x, vec.y, vec.z);
 }
 
+#include <Bifrost/Assets/Shading/LinearlyTransformedCosines.h>
+
 int main(int argc, char** argv) {
+
+    {
+        for (float roughness : { 0.0f, 0.25f, 0.5f, 1.0f }) {
+            for (float cos_theta_o : { 0.0f, 1.0f }) {
+                auto ltc = Shading::LTC::GGX_reflection_LTC_coefficients(cos_theta_o, roughness);
+                Matrix3x3f shading_to_LTC_space = ltc.get_inverse_M();
+                Matrix3x3f LTC_to_shading_space = ltc.get_M();
+                float roughness_x = LTC_to_shading_space(0, 0) / LTC_to_shading_space(2, 2);
+                float roughness_y = LTC_to_shading_space(1, 1) / LTC_to_shading_space(2, 2);
+
+                printf("Roughness: %f, cos_theta: %f:\n", roughness, cos_theta_o);
+                printf("  shading_to_LTC: %s\n", shading_to_LTC_space.to_string().c_str());
+                printf("  LTC_to_shading: %s\n", LTC_to_shading_space.to_string().c_str());
+                printf("  Roughness: [%f, %f], average: %f, magnitude: %f\n", roughness_x, roughness_y, 0.5f * (roughness_x + roughness_y), magnitude(Vector2f(roughness_x, roughness_y)));
+                printf("  LTC Roughness: [%f, %f]\n", ltc.get_roughness_u(), ltc.get_roughness_v());
+            }
+            printf("\n");
+        }
+    }
 
     std::string command = argc >= 2 ? std::string(argv[1]) : "";
     if (command.compare("-h") == 0 || command.compare("--help") == 0) {
