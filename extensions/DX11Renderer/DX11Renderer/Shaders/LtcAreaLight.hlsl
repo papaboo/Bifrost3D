@@ -48,53 +48,22 @@ float3 vector_edge_integral(float3 v1, float3 v2) {
 
 float edge_integral(float3 v1, float3 v2) { return vector_edge_integral(v1, v2).z; }
 
-namespace integrate_diffuse_sphere_cap_utils {
-
-float G(float omega, float sigma, float g) {
-    float cos_g = cos(g);
-    return -2.0f * sin(omega) * cos(sigma) * cos_g + PI * 0.5 - g + sin(g) * cos_g;
-}
-
-float H(float omega, float sigma, float g) {
-    float sin_sigma = sin(sigma);
-    float sin_sigma_sqrd = pow2(sin_sigma);
-    float cos_g = cos(g);
-
-    return cos(omega) * (cos_g * sqrt(sin_sigma_sqrd - pow2(cos_g)) + sin_sigma_sqrd * asin(cos_g / sin_sigma));
-}
-
-float integrate_sphere_cap(float omega, float sigma) {
-    float g = asin(cos(sigma) / sin(omega));
-    float sin_sigma_sqrd = pow2(sin(sigma));
-
-    if (omega >= 0.0f && omega <= (PI * 0.5 - sigma))
-        return PI * cos(omega) * sin_sigma_sqrd;
-
-    if (omega >= (PI * 0.5 - sigma) && omega < PI * 0.5)
-        return PI * cos(omega) * sin_sigma_sqrd + G(omega, sigma, g) - H(omega, sigma, g);
-
-    if (omega >= PI * 0.5 && omega < (PI * 0.5 + sigma))
-        return G(omega, sigma, g) + H(omega, sigma, g);
-
-    return 0.0f;
-}
-
-} // integrate_diffuse_sphere_cap_utils
+static const int diffuse_sphere_cap_integral_texture_size = 32;
+Texture2D<float> diffuse_sphere_cap_integral_tex : register(t16);
 
 // Closed form solution to integrating a sphere cap against a diffuse surface.
 // https://blog.selfshadow.com/publications/s2017-shading-course/heitz/s2017_pbs_ltc_lines_disks.pdf, slide 72.
 float integrate_diffuse_sphere_cap(float average_direction_z, float form_factor) {
-    float sigma = asin(sqrt(form_factor));
-    float omega = acos(average_direction_z);
 
-    if (sigma <= 0.0f)
-        return max(average_direction_z, 0.0f);
+    // Map average direction from [-1, 1] to [0, 1]
+    float direction_u = average_direction_z * 0.5 + 0.5;
 
-    float integral = integrate_diffuse_sphere_cap_utils::integrate_sphere_cap(omega, sigma) / (PI * form_factor);
+    // Adjust UV coordinates to start sampling half a pixel into the texture, as the pixel values correspond to the boundaries of the tabulated function.
+    static const float pixel_offset = 0.5 / diffuse_sphere_cap_integral_texture_size;
+    direction_u = lerp(pixel_offset, 1.0 - pixel_offset, direction_u);
+    float form_factor_v = lerp(pixel_offset, 1.0 - pixel_offset, form_factor);
 
-    // The integral can become unstable at grazing angles or if form_factor is zero.
-    // We handle that by hard setting it to zero.
-    return is_NaN(integral) ? 0.0f : integral;
+    return diffuse_sphere_cap_integral_tex.SampleLevel(bilinear_sampler, float2(direction_u, form_factor_v), 0);
 }
 
 // ------------------------------------------------------------------------------------------------

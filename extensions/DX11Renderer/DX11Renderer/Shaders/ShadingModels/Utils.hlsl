@@ -32,9 +32,9 @@ SamplerState tint_roughness_sampler : register(s2);
 Texture2D metallic_tex : register(t3);
 SamplerState metallic_sampler : register(s3);
 
-Texture2D<float4> ggx_ltc_fit_tex : register(t13);
 Texture3D<float2> dielectric_ggx_rho_tex : register(t14);
 Texture2D<float2> ggx_with_fresnel_rho_tex : register(t15);
+Texture2D<float4> ggx_ltc_fit_tex : register(t17);
 
 // ------------------------------------------------------------------------------------------------
 // Specular rho helpers.
