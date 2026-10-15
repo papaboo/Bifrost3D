@@ -41,6 +41,11 @@ public:
     _inline_all_archs_ Matrix3x3f get_M() const { return invert_matrix(e00, e11, e22, e02, e20); }
     _inline_all_archs_ float inverse_M_determinant() const { return e11 * (e00 * e22 - e02 * e20); }
 
+    // Rougheness of the LTC matrix is the elements e00 and e11 in the M matrix, normalized such that e22 = 1.
+    // See figure 2 in the paper.
+    _inline_all_archs_ float get_roughness_u() const { return e22 / e00; }
+    _inline_all_archs_ float get_roughness_v() const { return (e00 * e22 - e02 * e20) / (e00 * e11); }
+
     _inline_all_archs_ float PDF(Vector3f w) const {
         Vector3f w_original_scaled = get_inverse_M() * w;
 
