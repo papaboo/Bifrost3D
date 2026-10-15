@@ -57,7 +57,7 @@ if (DIRECTX11_FOUND AND WIN32)
     DX11Renderer/Shaders/ModelGBuffer.hlsl
     DX11Renderer/Shaders/ModelShading.hlsl
     DX11Renderer/Shaders/RNG.hlsl
-    DX11Renderer/Shaders/SphereLight.hlsl
+    DX11Renderer/Shaders/RenderAreaLights.hlsl
     DX11Renderer/Shaders/SSAO.hlsl
     DX11Renderer/Shaders/Utils.hlsl
   )
