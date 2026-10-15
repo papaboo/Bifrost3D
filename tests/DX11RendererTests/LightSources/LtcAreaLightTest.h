@@ -13,6 +13,7 @@
 #include <Utils.h>
 
 #include <DX11Renderer/Managers/ShaderManager.h>
+#include <DX11Renderer/Managers/TextureManager.h>
 
 #include <Bifrost/Assets/Shading/LightSources/LtcAreaLight.h>
 #include <Bifrost/Assets/Shading/LinearlyTransformedCosines.h>
@@ -273,7 +274,7 @@ GTEST_TEST(LtcAreaLight, Disk_light_application_are_equal_on_CPU_and_GPU) {
     bool two_sided = true;
 
     // LTCs
-    float roughness = 0.5f;
+    float roughness = 0.6f;
     const int LTC_count = 3;
     IsotropicLTC LTCs[LTC_count] = {
         LTC::lambert_LTC_coefficients(),
@@ -287,6 +288,10 @@ GTEST_TEST(LtcAreaLight, Disk_light_application_are_equal_on_CPU_and_GPU) {
         // Setup GPU
         auto device = create_test_device();
         auto context = get_immidiate_context1(device);
+        auto diffuse_sphere_cap_integral_srv = create_diffuse_sphere_cap_integral_srv(device);
+        context->CSSetShaderResources(SrvRegisters::DiffuseSphereCapIntegral, 1, &diffuse_sphere_cap_integral_srv);
+        OSamplerState linear_sampler = Managers::TextureManager::create_clamped_linear_sampler(device);
+        context->CSSetSamplers(15, 1, &linear_sampler);
 
         const std::string evaluate_ltc_area_light_cs =
             "#include <LtcAreaLight.hlsl>\n"
@@ -341,7 +346,11 @@ GTEST_TEST(LtcAreaLight, Disk_light_application_are_equal_on_CPU_and_GPU) {
             float expected_radiance = evaluate_disk_light(LTCs[x], wo, surface_point, surface_normal, light_control_points[y], two_sided);
             float actual_radiance = gpu_radiance[x + y * LTC_count];
             EXPECT_GT(expected_radiance, 0.0f) << " sanity check that the light illuminates the surface.";
-            EXPECT_FLOAT_EQ_PCT(expected_radiance, actual_radiance, 0.001f) << " combination [LTC: " << x << ", light: " << y << "]";
+
+            // GGX has a higher deviation from the diffuse sphere cap discretization than Lambert and OrenNayar.
+            bool is_GGX = x == 2;
+            float deviation = is_GGX ? 0.025f : 0.001f;
+            EXPECT_FLOAT_EQ_PCT(expected_radiance, actual_radiance, deviation) << " combination [LTC: " << x << ", light: " << y << "]";
         }
 }
 
