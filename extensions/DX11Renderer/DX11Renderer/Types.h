@@ -149,9 +149,10 @@ constexpr int CameraEffects = 0;
 namespace SrvRegisters {
 constexpr int MeshLights = 11;
 constexpr int Ssao = 12;
-constexpr int GgxLtcFit = 13;
 constexpr int TabulatedDielectricGgxRho = 14;
 constexpr int TabulatedGgxWithFresnelRho = 15;
+constexpr int DiffuseSphereCapIntegral = 16;
+constexpr int GgxLtcFit = 17;
 }
 
 //-------------------------------------------------------------------------------------------------
