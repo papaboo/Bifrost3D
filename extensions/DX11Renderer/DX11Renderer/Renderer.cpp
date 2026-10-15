@@ -174,6 +174,8 @@ public:
             m_mesh_lights = MeshLightManager();
 
             // Setup static state.
+            auto diffuse_sphere_cap_integral_srv = create_diffuse_sphere_cap_integral_srv(m_device);
+            m_render_context->PSSetShaderResources(SrvRegisters::DiffuseSphereCapIntegral, 1, &diffuse_sphere_cap_integral_srv);
             m_render_context->PSSetShaderResources(SrvRegisters::GgxLtcFit, 1, m_materials.get_GGX_LTC_fit_rho_srv_addr());
             m_render_context->PSSetShaderResources(SrvRegisters::TabulatedGgxWithFresnelRho, 1, m_materials.get_GGX_with_fresnel_rho_srv_addr());
 
