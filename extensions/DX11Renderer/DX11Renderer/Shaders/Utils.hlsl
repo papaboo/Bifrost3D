@@ -82,6 +82,12 @@ struct IsotropicLTC {
     float3x3 get_M() { return invert_matrix(e00, e11, e22, e02, e20); }
     float inverse_M_determinant() { return e11 * (e00 * e22 - e02 * e20); }
 
+    // Rougheness of the LTC matrix is the elements e00 and e11 in the M matrix, normalized such that e22 = 1.
+    // See figure 2 in the paper.
+    float get_roughness_u() { return e22 / e00; }
+    float get_roughness_v() { return (e00 * e22 - e02 * e20) / (e00 * e11); }
+    float get_roughness() { return 0.5 * (get_roughness_u() + get_roughness_v()); }
+
     // Specialized 3x3 matrix inversion for diagonal cross matrices.
     static float3x3 invert_matrix(float e00, float e11, float e22, float e02, float e20) {
         // As all non-zero elements are scaled by e11, we inline that into the precomputed determinant.
