@@ -86,16 +86,16 @@ _inline_all_archs_ float integrate_sphere_cap(float omega, float sigma) {
 
 // Closed form solution to integrating a sphere cap against a diffuse surface.
 // https://blog.selfshadow.com/publications/s2017-shading-course/heitz/s2017_pbs_ltc_lines_disks.pdf, slide 72.
-_inline_all_archs_ float integrate_diffuse_sphere_cap(float average_direction_z, float form_factor) {
-    float sigma = asinf(sqrtf(form_factor));
+_inline_all_archs_ float integrate_diffuse_sphere_cap(float average_direction_z, float projected_solid_angle_over_PI) {
+    float sigma = asinf(sqrtf(projected_solid_angle_over_PI));
     float omega = acosf(average_direction_z);
 
     if (sigma <= 0.0f)
         return fmaxf(average_direction_z, 0.0f);
 
-    float integral = integrate_sphere_cap(omega, sigma) / (Math::PI<float>() * form_factor);
+    float integral = integrate_sphere_cap(omega, sigma) / (Math::PI<float>() * projected_solid_angle_over_PI);
 
-    // The integral can become unstable at grazing angles or if form_factor is zero.
+    // The integral can become unstable at grazing angles or if projected_solid_angle_over_PI is zero.
     // We handle that by hard setting it to zero.
     return isnan(integral) ? 0.0f : integral;
 }
