@@ -13,6 +13,7 @@
 #include <Utils.h>
 
 #include <DX11Renderer/Managers/ShaderManager.h>
+#include <DX11Renderer/Managers/TextureManager.h>
 
 #include <Bifrost/Assets/Shading/LightSources/LtcAreaLight.h>
 #include <Bifrost/Assets/Shading/LinearlyTransformedCosines.h>
@@ -73,7 +74,7 @@ GTEST_TEST(LtcAreaLight, LTC_matrix_rows_are_equal_on_CPU_and_GPU) {
     EXPECT_VECTOR4F_EQ(Vector4f(expected_inverse_M.get_row(2), 2), gpu_ltc_rows[5]);
 }
 
-GTEST_TEST(LtcAreaLight, Area_light_application_are_equal_on_CPU_and_GPU) {
+GTEST_TEST(LtcAreaLight, Triangle_light_application_are_equal_on_CPU_and_GPU) {
     using namespace Bifrost::Assets::Shading;
     using namespace Bifrost::Math;
 
@@ -164,6 +165,7 @@ GTEST_TEST(LtcAreaLight, Area_light_application_are_equal_on_CPU_and_GPU) {
             // Compare equality of evaluating without emission
             float expected_radiance = Bifrost::Assets::Shading::LightSources::LtcAreaLight::evaluate_triangle_light(LTCs[x], wo, surface_point, surface_normal, &lights[y].v0, two_sided);
             float actual_radiance = gpu_radiance[x + y * LTC_count].a;
+            EXPECT_GT(expected_radiance, 0.0f) << " sanity check that the light illuminates the surface.";
             EXPECT_FLOAT_EQ_PCT(expected_radiance, actual_radiance, 0.001f) << " combination [LTC: " << x << ", light: " << y << "]";
 
             // Compare equality of evaluating with white emission of intensity 1
@@ -248,6 +250,108 @@ GTEST_TEST(LtcAreaLight, Light_behind_surface_not_contributing) {
 
     float no_light_contribution = 0;
     EXPECT_FLOAT_EQ(no_light_contribution, actual_light_contribution);
+}
+
+GTEST_TEST(LtcAreaLight, Disk_light_application_are_equal_on_CPU_and_GPU) {
+    using namespace Bifrost::Assets::Shading;
+    using namespace Bifrost::Assets::Shading::LightSources::LtcAreaLight;
+    using namespace Bifrost::Math;
+
+    // Setup scene
+    Vector3f wo = normalize(Vector3f(1, -1, 1));
+    float cos_theta = wo.z;
+
+    Vector3f surface_point = Vector3f(0, 0, 0);
+    Vector3f surface_normal = Vector3f(0, 0, 1);
+
+    // Lights
+    const int light_count = 2;
+    Disk lights[light_count] = {
+        Disk(Vector3f(0, 0, 1), 2, Vector3f(0, 0, -1)),
+        Disk(Vector3f(1, 0, 0), 2, Vector3f(-1, 0, 0))
+    };
+    DiskControlPoints light_control_points[light_count] = { DiskControlPoints(lights[0]), DiskControlPoints(lights[1]) };
+    bool two_sided = true;
+
+    // LTCs
+    float roughness = 0.6f;
+    const int LTC_count = 3;
+    IsotropicLTC LTCs[LTC_count] = {
+        LTC::lambert_LTC_coefficients(),
+        LTC::oren_nayar_LTC_coefficients(cos_theta, roughness),
+        LTC::GGX_reflection_LTC_coefficients(cos_theta, roughness),
+    };
+
+    const int test_count = light_count * LTC_count;
+    float gpu_radiance[test_count];
+    { // Apply on GPU
+        // Setup GPU
+        auto device = create_test_device();
+        auto context = get_immidiate_context1(device);
+        auto diffuse_sphere_cap_integral_srv = create_diffuse_sphere_cap_integral_srv(device);
+        context->CSSetShaderResources(SrvRegisters::DiffuseSphereCapIntegral, 1, &diffuse_sphere_cap_integral_srv);
+        OSamplerState linear_sampler = Managers::TextureManager::create_clamped_linear_sampler(device);
+        context->CSSetSamplers(15, 1, &linear_sampler);
+
+        const std::string evaluate_ltc_area_light_cs =
+            "#include <LtcAreaLight.hlsl>\n"
+            "\n"
+            "static const int light_count = " + std::to_string(light_count) + ";\n"
+            "static const int LTC_count = " + std::to_string(LTC_count) + ";\n"
+            "\n"
+            "struct DiskControlPoints { float3 points[3]; };\n"
+            "\n"
+            "StructuredBuffer<DiskControlPoints> light_control_points : register(t0);\n"
+            "StructuredBuffer<IsotropicLTC> LTCs : register(t1);\n"
+            "RWStructuredBuffer<float> radiance : register(u0);\n"
+            "\n"
+            "[numthreads(LTC_count, light_count, 1)]\n"
+            "void evaluate_ltc_area_light_cs(uint2 thread_index : SV_GroupThreadID) {\n"
+            "    IsotropicLTC bsdf = LTCs[thread_index.x];\n"
+            "    DiskControlPoints light_surface = light_control_points[thread_index.y];\n"
+            "    float3 wo = normalize(float3(1, -1, 1));\n"
+            "    float3 surface_point = float3(0, 0, 0);\n"
+            "    float3 surface_normal = float3(0, 0, 1);\n"
+            "    bool two_sided = true;\n"
+            "    radiance[thread_index.x + thread_index.y * LTC_count] =\n"
+            "        LtcAreaLight::evaluate_disk_light(bsdf, wo, surface_point, surface_normal, light_surface.points, two_sided);\n"
+            "}\n";
+
+        OComputeShader ltc_evaluation_shader;
+        OBlob shader_blob = Managers::ShaderManager().compile_shader_source(evaluate_ltc_area_light_cs.c_str(), "cs_5_0", "evaluate_ltc_area_light_cs");
+        THROW_DX11_ERROR(device->CreateComputeShader(UNPACK_BLOB_ARGS(shader_blob), nullptr, &ltc_evaluation_shader));
+
+        OShaderResourceView light_control_points_SRV;
+        create_structured_buffer(device, light_control_points, light_count, &light_control_points_SRV);
+        context->CSSetShaderResources(0, 1, &light_control_points_SRV);
+
+        OShaderResourceView LTCs_SRV;
+        create_structured_buffer(device, LTCs, LTC_count, &LTCs_SRV);
+        context->CSSetShaderResources(1, 1, &LTCs_SRV);
+
+        OUnorderedAccessView radiance_UAV;
+        OBuffer radiance_buffer = create_default_buffer(device, DXGI_FORMAT_R32_FLOAT, nullptr, test_count, nullptr, &radiance_UAV);
+        context->CSSetUnorderedAccessViews(0, 1, &radiance_UAV, nullptr);
+
+        context->CSSetShader(ltc_evaluation_shader, nullptr, 0);
+        context->Dispatch(1, 1, 1);
+
+        Readback::buffer(device, context, radiance_buffer, gpu_radiance, gpu_radiance + test_count);
+    }
+
+    // Apply on CPU
+    for (int y = 0; y < light_count; ++y)
+        for (int x = 0; x < LTC_count; ++x) {
+            // Compare equality of evaluating without emission
+            float expected_radiance = evaluate_disk_light(LTCs[x], wo, surface_point, surface_normal, light_control_points[y], two_sided);
+            float actual_radiance = gpu_radiance[x + y * LTC_count];
+            EXPECT_GT(expected_radiance, 0.0f) << " sanity check that the light illuminates the surface.";
+
+            // GGX has a higher deviation from the diffuse sphere cap discretization than Lambert and OrenNayar.
+            bool is_GGX = x == 2;
+            float deviation = is_GGX ? 0.025f : 0.001f;
+            EXPECT_FLOAT_EQ_PCT(expected_radiance, actual_radiance, deviation) << " combination [LTC: " << x << ", light: " << y << "]";
+        }
 }
 
 } // NS DX11Renderer::LightSources

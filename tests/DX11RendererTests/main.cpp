@@ -10,6 +10,7 @@
 
 #include <LightSources/LtcAreaLightTest.h>
 
+#include <Managers/LightManagerTest.h>
 #include <Managers/MaterialManagerTest.h>
 #include <Managers/MeshLightManagerTest.h>
 #include <Managers/MeshManagerTest.h>

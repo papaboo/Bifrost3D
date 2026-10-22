@@ -32,9 +32,9 @@ SamplerState tint_roughness_sampler : register(s2);
 Texture2D metallic_tex : register(t3);
 SamplerState metallic_sampler : register(s3);
 
-Texture2D<float4> ggx_ltc_fit_tex : register(t13);
 Texture3D<float2> dielectric_ggx_rho_tex : register(t14);
 Texture2D<float2> ggx_with_fresnel_rho_tex : register(t15);
+Texture2D<float4> ggx_ltc_fit_tex : register(t17);
 
 // ------------------------------------------------------------------------------------------------
 // Specular rho helpers.
@@ -127,8 +127,6 @@ static IsotropicLTC fetch(float abs_cos_theta_o, float roughness) {
 namespace GGXReflectionLTC {
 static const int angle_sample_count = 64;
 static const int roughness_sample_count = 64;
-static const float4 minimum_param_value = float4(0.0, -0.297647, -0.0138124, 0.0);
-static const float4 maximum_param_value = float4(1.00099, 0.0263276, 0.590569, 1.6577);
 
 static IsotropicLTC fetch(float abs_cos_theta_o, float roughness) {
     float v = sqrt(max(0.0f, 1 - abs_cos_theta_o));
@@ -137,8 +135,7 @@ static IsotropicLTC fetch(float abs_cos_theta_o, float roughness) {
     float roughness_u = lerp(0.5 / roughness_sample_count, 1.0 - 0.5 / roughness_sample_count, roughness);
     float cos_theta_v = lerp(0.5 / angle_sample_count, 1.0 - 0.5 / angle_sample_count, v);
 
-    float4 scaled_ltc_params = ggx_ltc_fit_tex.SampleLevel(bilinear_sampler, float2(roughness_u, cos_theta_v), 0);
-    float4 ltc_params = lerp(minimum_param_value, maximum_param_value, scaled_ltc_params);
+    float4 ltc_params = ggx_ltc_fit_tex.SampleLevel(bilinear_sampler, float2(roughness_u, cos_theta_v), 0);
 
     return IsotropicLTC::from_inverse_M(ltc_params.x, 1, ltc_params.w, ltc_params.z, ltc_params.y);
 }
@@ -207,57 +204,6 @@ struct Parameters {
     float coat_scale() { return m_coat; }
     float coat_roughness() { return m_coat_roughness; }
 };
-
-//-----------------------------------------------------------------------------
-// Sphere light BRDF approximations.
-//-----------------------------------------------------------------------------
-
-float3 evaluate_sphere_light_lambert(SphereLight light, float3 light_radiance, float3 wo, float3 tint, float ambient_visibility) {
-    // Scale ambient visibility.
-    Cone light_sphere_cap = light.get_sphere_cap();
-
-    // Use the spherical cap of a sphere light to scale ambient visibility.
-    // The rationale is that a large light needs AO to effectively occlude the light,
-    // while a small light source can rely on shadowmaps or other means of direct sampling.
-    float solidangle_of_light = solidangle(light_sphere_cap);
-    float solidangle_percentage = inverse_lerp(0, TWO_PI, solidangle_of_light);
-    float scaled_ambient_visibility = lerp(1.0, ambient_visibility, solidangle_percentage);
-
-    // Evaluate Lambert lighting.
-    CentroidAndSolidangle centroid_and_solidangle = centroid_and_solidangle_on_hemisphere(light_sphere_cap);
-    float light_radiance_scale = centroid_and_solidangle.solidangle / solidangle(light_sphere_cap);
-    float3 lambert_f = tint * BSDFs::Lambert::evaluate();
-    float3 light_contribution = light_radiance * centroid_and_solidangle.centroid_direction.z * light_radiance_scale * scaled_ambient_visibility;
-    return lambert_f * light_contribution;
-}
-
-// GGX sphere light evaluation by most representative point, heavily inspired by Real Shading in Unreal Engine 4.
-// For UE4 reference see the function AreaLightSpecular() in DeferredLightingCommon.usf. (15/1 -2018)
-float3 evaluate_sphere_light_GGX(SphereLight light, float3 light_radiance, float3 wo, float3 specularity, float ggx_alpha, float ambient_visibility) {
-    // Closest point on sphere to ray. Equation 11 in Real Shading in Unreal Engine 4, 2013.
-    float3 peak_reflection = BSDFs::GGX::approx_off_specular_peak(ggx_alpha, wo);
-    float3 closest_point_on_ray = dot(light.position, peak_reflection) * peak_reflection;
-    float3 center_to_ray = closest_point_on_ray - light.position;
-    float3 most_representative_point = light.position + center_to_ray * saturate(light.radius * reciprocal_length(center_to_ray));
-    float3 wi = normalize(most_representative_point);
-
-    // Return no contribution if lit from the backside.
-    // Due to floating point precision this can happen even if the light is not found to be on the backside.
-    if (wi.z <= 0.0f)
-        return float3(0, 0, 0);
-
-    float specular_ambient_visibility = BSDFs::GGX::scaled_ambient_visibility(ggx_alpha, ambient_visibility);
-
-    // Limit GGX alpha as nearly specular surfaces produce artifacts.
-    ggx_alpha = max(0.002, ggx_alpha);
-
-    float cos_theta_i = wi.z;
-    float sin_theta_squared = pow2(light.radius) / dot(most_representative_point, most_representative_point);
-    float a2 = pow2(ggx_alpha);
-    float area_light_normalization_term = a2 / (a2 + sin_theta_squared / (cos_theta_i * 3.6 + 0.4));
-
-    return BSDFs::GGX::evaluate(ggx_alpha, specularity, wo, wi) * cos_theta_i * light_radiance * area_light_normalization_term * specular_ambient_visibility;
-}
 
 //-----------------------------------------------------------------------------
 // IBL evaluation

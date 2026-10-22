@@ -17,13 +17,6 @@
 namespace Bifrost::Assets::Shading {
 
 // ------------------------------------------------------------------------------------------------
-// Constants
-// ------------------------------------------------------------------------------------------------
-constexpr float PIf = 3.14159265358979323846f;
-constexpr float TWO_PIf = 6.28318530717958647692f;
-constexpr float RECIP_PIf = 0.31830988618379067153776752674503f;
-
-// ------------------------------------------------------------------------------------------------
 // General shading utils
 // ------------------------------------------------------------------------------------------------
 
@@ -197,6 +190,11 @@ struct alignas(8) LightResponse {
 
     _inline_all_archs_ static LightResponse none() {
         LightResponse evaluation = {};
+        return evaluation;
+    }
+
+    _inline_all_archs_ static LightResponse delta_dirac() {
+        LightResponse evaluation = { Math::RGB::black(), Math::MonteCarlo::PDF::delta_dirac(0) };
         return evaluation;
     }
 };

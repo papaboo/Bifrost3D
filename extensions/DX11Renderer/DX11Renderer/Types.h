@@ -149,9 +149,10 @@ constexpr int CameraEffects = 0;
 namespace SrvRegisters {
 constexpr int MeshLights = 11;
 constexpr int Ssao = 12;
-constexpr int GgxLtcFit = 13;
 constexpr int TabulatedDielectricGgxRho = 14;
 constexpr int TabulatedGgxWithFresnelRho = 15;
+constexpr int DiffuseSphereCapIntegral = 16;
+constexpr int GgxLtcFit = 17;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -358,7 +359,7 @@ struct Dx11SphereLight {
     float radius;
 };
 
-struct Dx11SpotLight {
+struct Dx11DiskLight {
     float3 power;
     float3 position;
     float radius;
@@ -371,7 +372,7 @@ struct Dx11Light{
         None = 0u,
         Sphere = 1u,
         Directional = 2u,
-        Spot = 3u,
+        Disk = 3u,
         TypeMask = 3u
     };
 
@@ -380,11 +381,21 @@ struct Dx11Light{
     union {
         Dx11DirectionalLight directional;
         Dx11SphereLight sphere;
-        Dx11SpotLight spot;
+        Dx11DiskLight disk;
     };
 
-    unsigned int get_type() const { return (Flags)(unsigned int)flags; }
-    bool is_type(Flags light_type) { return get_type() == light_type; }
+    static Dx11Light none() {
+        Dx11Light light = {}; // Set flags to None as well.
+        return light;
+    }
+
+    Flags get_type() const { return Flags((unsigned int)flags & TypeMask); }
+    bool is_type(Flags light_type) const { return get_type() == light_type; }
+
+    bool is_area_light() {
+        Flags type = get_type();
+        return (type == Sphere && sphere.radius > 0.0f) || (type == Disk && disk.radius > 0.0f);
+    }
 };
 
 } // NS DX11Renderer

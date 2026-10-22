@@ -16,6 +16,7 @@ if (TARGET DX11Renderer)
   )
 
   set(MANAGERS_SRCS
+    Managers/LightManagerTest.h
     Managers/MaterialManagerTest.h
     Managers/MeshLightManagerTest.h
     Managers/MeshManagerTest.h

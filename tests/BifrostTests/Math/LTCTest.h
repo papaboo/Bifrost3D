@@ -92,6 +92,24 @@ GTEST_TEST(Math_LTC, integrates_to_one) {
     }
 }
 
+GTEST_TEST(Math_LTC, roughness_equals_elements_in_M) {
+
+    // Test a few randomly initialized LTCs.
+    RNG::XorShift32 rng = RNG::XorShift32(3);
+    for (int i = 0; i < 5; ++i) {
+        IsotropicLTC ltc = { rng.sample1f(), rng.sample1f(), rng.sample1f(), rng.sample1f(), rng.sample1f() };
+
+        // Get M matrix normalized such that the element at (2,2) is 1
+        auto M = ltc.get_M();
+        M /= M(2, 2);
+        EXPECT_FLOAT_EQ(1.0f, M(2, 2));
+
+        // Assert that roughness returns the same value as the (0,0) and (1,1) elements in M.
+        EXPECT_FLOAT_EQ(M(0,0), ltc.get_roughness_u());
+        EXPECT_FLOAT_EQ(M(1,1), ltc.get_roughness_v());
+    }
+}
+
 } // NS Bifrost::Math
 
 #endif // _BIFROST_MATH_LTC_TEST_H_
