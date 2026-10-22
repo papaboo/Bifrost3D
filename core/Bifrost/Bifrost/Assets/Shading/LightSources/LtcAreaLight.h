@@ -52,11 +52,19 @@ _inline_all_archs_ Math::Vector3f vector_edge_integral(Math::Vector3f v1, Math::
 
 _inline_all_archs_ float edge_integral(Math::Vector3f v1, Math::Vector3f v2) { return vector_edge_integral(v1, v2).z; }
 
-_inline_all_archs_ float integrate_sphere_cap(float omega, float sigma) {
+// Closed form solution to integrating a sphere cap against a diffuse surface.
+// https://blog.selfshadow.com/publications/s2017-shading-course/heitz/s2017_pbs_ltc_lines_disks.pdf, slide 72.
+_inline_all_archs_ float integrate_diffuse_sphere_cap(float average_direction_z, float projected_solid_angle_over_PI) {
+    if (projected_solid_angle_over_PI == 0.0f)
+        return 0.0f;
+
     constexpr float pi = Math::PI<float>();
     constexpr float half_pi = 0.5f * pi;
 
     auto safe_asinf = [](float v) -> float { return asinf(Math::clamp(v, -1.0f, 1.0f)); };
+
+    float sigma = asinf(sqrtf(projected_solid_angle_over_PI));
+    float omega = acosf(average_direction_z);
 
     float g = safe_asinf(cosf(sigma) / sinf(omega));
     float sin_sigma_sqrd = Math::pow2(sinf(sigma));
@@ -74,32 +82,31 @@ _inline_all_archs_ float integrate_sphere_cap(float omega, float sigma) {
         return cosf(omega) * (cos_g * Math::safe_sqrt(sin_sigma_sqrd - Math::pow2(cos_g)) + sin_sigma_sqrd * safe_asinf(cos_g / sin_sigma));
     };
 
+    // Sphere cap is fully above horizon.
     if (omega >= 0.0f && omega <= (half_pi - sigma))
-        return pi * cosf(omega) * sin_sigma_sqrd;
+        return cosf(omega) * sin_sigma_sqrd;
 
+    // Sphere cap center is above the horizon, but part of the cap has dipped below the horizon.
     if (omega >= (half_pi - sigma) && omega < half_pi)
-        return pi * cosf(omega) * sin_sigma_sqrd + G(omega, sigma, g) - H(omega, sigma, g);
+        return cosf(omega) * sin_sigma_sqrd + (G(omega, sigma, g) - H(omega, sigma, g)) / pi;
 
+    // Part of the sphere cap is above the horizon, but the center is dipped below the horizon.
     if (omega >= half_pi && omega < (half_pi + sigma))
-        return G(omega, sigma, g) + H(omega, sigma, g);
+        return (G(omega, sigma, g) + H(omega, sigma, g)) / pi;
 
+    // The cap is completely  below the horizon.
     return 0.0f;
 }
 
-// Closed form solution to integrating a sphere cap against a diffuse surface.
-// https://blog.selfshadow.com/publications/s2017-shading-course/heitz/s2017_pbs_ltc_lines_disks.pdf, slide 72.
-_inline_all_archs_ float integrate_diffuse_sphere_cap(float average_direction_z, float form_factor) {
-    float sigma = asinf(sqrtf(form_factor));
-    float omega = acosf(average_direction_z);
-
-    if (sigma <= 0.0f)
+_inline_all_archs_ float diffuse_sphere_light_visibility(float average_direction_z, float projected_solid_angle_over_PI) {
+    if (projected_solid_angle_over_PI == 0)
         return fmaxf(average_direction_z, 0.0f);
 
-    float integral = integrate_sphere_cap(omega, sigma) / (Math::PI<float>() * form_factor);
+    float diffuse_sphere_cap_integral = integrate_diffuse_sphere_cap(average_direction_z, projected_solid_angle_over_PI);
 
-    // The integral can become unstable at grazing angles or if form_factor is zero.
-    // We handle that by hard setting it to zero.
-    return isnan(integral) ? 0.0f : integral;
+    // Divide by the projected solid angle and multiple by PI to divide out the size of the light and the normalization of the Lambertian surface.
+    // What's left is the visibility of the light source wrt to a diffuse surface.
+    return diffuse_sphere_cap_integral / projected_solid_angle_over_PI;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -394,16 +401,14 @@ _inline_all_archs_ float evaluate_disk_light(Math::IsotropicLTC bsdf, Math::Vect
     Vector3f average_direction = { a_over_b * x0 / (a_over_b - e2), y0 / (1 - e2), 1.0 };
     average_direction = normalize(v1 * average_direction.x + v2 * average_direction.y + v3 * average_direction.z);
 
-    // Calculate projected solid angle (form_factor) - Slide 72
+    // Calculate projected solid angle over pi (form_factor) - Slide 72
     float l1_sqrd = -e2 / e3;
     float l2_sqrd = -e2 / e1;
     float form_factor_sqrd = (l1_sqrd * l2_sqrd) / ((1 + l1_sqrd) * (1 + l2_sqrd));
     float form_factor = sqrt(form_factor_sqrd);
 
     // Use horizon-clipped sphere approximation to clip the light.
-    float clipping = integrate_diffuse_sphere_cap(average_direction.z, form_factor);
-
-    return form_factor * clipping;
+    return diffuse_sphere_light_visibility(average_direction.z, form_factor) * form_factor;
 }
 
 }

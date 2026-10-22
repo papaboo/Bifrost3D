@@ -288,8 +288,8 @@ GTEST_TEST(LtcAreaLight, Disk_light_application_are_equal_on_CPU_and_GPU) {
         // Setup GPU
         auto device = create_test_device();
         auto context = get_immidiate_context1(device);
-        auto diffuse_sphere_cap_integral_srv = create_diffuse_sphere_cap_integral_srv(device);
-        context->CSSetShaderResources(SrvRegisters::DiffuseSphereCapIntegral, 1, &diffuse_sphere_cap_integral_srv);
+        auto diffuse_sphere_light_visibility_srv = create_diffuse_sphere_light_visibility_srv(device);
+        context->CSSetShaderResources(SrvRegisters::DiffuseSphereLightVisibility, 1, &diffuse_sphere_light_visibility_srv);
         OSamplerState linear_sampler = Managers::TextureManager::create_clamped_linear_sampler(device);
         context->CSSetSamplers(15, 1, &linear_sampler);
 

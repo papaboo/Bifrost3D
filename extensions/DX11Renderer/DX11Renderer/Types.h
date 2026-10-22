@@ -151,7 +151,7 @@ constexpr int MeshLights = 11;
 constexpr int Ssao = 12;
 constexpr int TabulatedDielectricGgxRho = 14;
 constexpr int TabulatedGgxWithFresnelRho = 15;
-constexpr int DiffuseSphereCapIntegral = 16;
+constexpr int DiffuseSphereLightVisibility = 16;
 constexpr int GgxLtcFit = 17;
 }
 

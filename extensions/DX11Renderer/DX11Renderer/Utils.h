@@ -417,8 +417,8 @@ inline void buffer(ID3D11Device1* device, ID3D11DeviceContext1* context, ID3D11B
 
 } // NS Readback
 
-constexpr unsigned int diffuse_sphere_cap_integral_texture_size = 32;
-OShaderResourceView create_diffuse_sphere_cap_integral_srv(ID3D11Device1& device);
+constexpr unsigned int diffuse_sphere_light_visibility_texture_size = 32;
+OShaderResourceView create_diffuse_sphere_light_visibility_srv(ID3D11Device1& device);
 
 } // NS DX11Renderer
 

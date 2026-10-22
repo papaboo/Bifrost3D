@@ -52,22 +52,22 @@ void get_data_directory(path& data_directory) {
     data_directory = application_directory.parent_path() / "Data";
 }
 
-OShaderResourceView create_diffuse_sphere_cap_integral_srv(ID3D11Device1& device) {
+OShaderResourceView create_diffuse_sphere_light_visibility_srv(ID3D11Device1& device) {
     using namespace Bifrost::Assets::Shading::LightSources;
     using namespace Bifrost::Math;
 
-    const unsigned int width = diffuse_sphere_cap_integral_texture_size;
-    const unsigned int height = diffuse_sphere_cap_integral_texture_size;
+    const unsigned int width = diffuse_sphere_light_visibility_texture_size;
+    const unsigned int height = diffuse_sphere_light_visibility_texture_size;
     const unsigned int element_count = width * height;
 
     UNorm8* pixels = new UNorm8[element_count];
     for (unsigned int y = 0; y < height; ++y) {
-        float form_factor = y / float(height - 1);
+        float projected_solid_angle_over_pi = y / float(height - 1);
         for (unsigned int x = 0; x < width; ++x) {
 
             float direction_u = x / float(width - 1);
             float average_direction_z = direction_u * 2 - 1;
-            pixels[x + y * width] = LtcAreaLight::integrate_diffuse_sphere_cap(average_direction_z, form_factor);
+            pixels[x + y * width] = LtcAreaLight::diffuse_sphere_light_visibility(average_direction_z, projected_solid_angle_over_pi);
         }
     }
 

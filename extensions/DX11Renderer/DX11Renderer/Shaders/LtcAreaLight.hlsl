@@ -48,22 +48,23 @@ float3 vector_edge_integral(float3 v1, float3 v2) {
 
 float edge_integral(float3 v1, float3 v2) { return vector_edge_integral(v1, v2).z; }
 
-static const int diffuse_sphere_cap_integral_texture_size = 32;
-Texture2D<float> diffuse_sphere_cap_integral_tex : register(t16);
+static const int sphere_light_occlusion_texture_size = 32;
+Texture2D<float> sphere_light_occlusion_tex : register(t16);
 
-// Closed form solution to integrating a sphere cap against a diffuse surface.
+// Samples the a texture containing the visibility of a sphere light defined by the angle of it's elevation and projected solid angle over pi,
+// which is the form factor computed by LTC light integration.
 // https://blog.selfshadow.com/publications/s2017-shading-course/heitz/s2017_pbs_ltc_lines_disks.pdf, slide 72.
-float integrate_diffuse_sphere_cap(float average_direction_z, float form_factor) {
+float sphere_light_occlusion(float average_direction_z, float projected_solid_angle_over_pi) {
 
     // Map average direction from [-1, 1] to [0, 1]
     float direction_u = average_direction_z * 0.5 + 0.5;
 
     // Adjust UV coordinates to start sampling half a pixel into the texture, as the pixel values correspond to the boundaries of the tabulated function.
-    static const float pixel_offset = 0.5 / diffuse_sphere_cap_integral_texture_size;
-    direction_u = lerp(pixel_offset, 1.0 - pixel_offset, direction_u);
-    float form_factor_v = lerp(pixel_offset, 1.0 - pixel_offset, form_factor);
+    static const float pixel_offset = 0.5 / sphere_light_occlusion_texture_size;
+    float u = lerp(pixel_offset, 1.0 - pixel_offset, direction_u);
+    float v = lerp(pixel_offset, 1.0 - pixel_offset, projected_solid_angle_over_pi);
 
-    return diffuse_sphere_cap_integral_tex.SampleLevel(bilinear_sampler, float2(direction_u, form_factor_v), 0);
+    return sphere_light_occlusion_tex.SampleLevel(bilinear_sampler, float2(u, v), 0);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -361,14 +362,14 @@ float evaluate_disk_light(IsotropicLTC bsdf, float3 wo, float3 position, float3 
     float3 average_direction = { a_over_b * x0 / (a_over_b - e2), y0 / (1 - e2), 1.0 };
     average_direction = normalize(v1 * average_direction.x + v2 * average_direction.y + v3 * average_direction.z);
 
-    // Calculate projected solid angle (form_factor) - Slide 72
+    // Calculate form factor, i.e. the projected solid angle over PI - Slide 72
     float l1_sqrd = -e2 / e3;
     float l2_sqrd = -e2 / e1;
     float form_factor_sqrd = (l1_sqrd * l2_sqrd) / ((1 + l1_sqrd) * (1 + l2_sqrd));
     float form_factor = safe_sqrt(form_factor_sqrd);
 
     // Use horizon-clipped sphere approximation to clip the light.
-    float clipping = integrate_diffuse_sphere_cap(average_direction.z, form_factor);
+    float clipping = sphere_light_occlusion(average_direction.z, form_factor);
 
     return form_factor * clipping;
 }
