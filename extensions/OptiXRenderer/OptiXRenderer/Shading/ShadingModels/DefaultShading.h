@@ -40,9 +40,9 @@ namespace OptiXRenderer::Shading::ShadingModels {
 
 class DefaultShading {
 private:
-    Bifrost::Math::RGB m_diffuse_tint;
+    RGB m_diffuse_tint;
     float m_roughness;
-    Bifrost::Math::RGB m_specularity;
+    RGB m_specularity;
     float m_specular_scale;
     float m_coat_scale;
     float m_coat_alpha;
@@ -65,14 +65,14 @@ private:
     }
 
     // Sets up the specular microfacet and the diffuse reflection as described in setup_base_layer().
-    __inline_all__ void setup_shading(optix::float3 tint, float roughness, float dielectric_specularity, float metallic, float coat_scale, float coat_roughness,
+    __inline_all__ void setup_shading(RGB tint, float roughness, float dielectric_specularity, float metallic, float coat_scale, float coat_roughness,
         float cos_theta_o, float& coat_rho) {
-        using namespace optix;
+        using namespace Bifrost::Math;
 
         float abs_cos_theta_o = abs(cos_theta_o);
 
         m_roughness = roughness;
-        float3 conductor_specularity = tint;
+        RGB conductor_specularity = tint;
 
         // Adjust parameters if coat is enabled.
         if (coat_scale > 0) {
@@ -90,16 +90,16 @@ private:
             if (metallic > 0) {
                 // Not all extinction coefficients are valid for all specularities and some combinations will result in NANs in the adjusted specularity.
                 // To avoid these issues we use zero extinction, which results in the same adjustment as to dielectric specularity.
-                float3 conductor_extinction_coefficient = optix::make_float3(0, 0, 0);
-                float3 exterior_ior = { Bifrost::Assets::Shading::coat_ior, Bifrost::Assets::Shading::coat_ior, Bifrost::Assets::Shading::coat_ior };
-                float3 coated_conductor_specularity = adjust_conductor_specularity_to_exterior_medium(exterior_ior, conductor_specularity, conductor_extinction_coefficient);
+                RGB conductor_extinction_coefficient = RGB(0, 0, 0);
+                RGB exterior_ior = { Bifrost::Assets::Shading::coat_ior, Bifrost::Assets::Shading::coat_ior, Bifrost::Assets::Shading::coat_ior };
+                RGB coated_conductor_specularity = Bifrost::Assets::Shading::adjust_conductor_specularity_to_exterior_medium(exterior_ior, conductor_specularity, conductor_extinction_coefficient);
                 conductor_specularity = lerp(conductor_specularity, coated_conductor_specularity, coat_scale);
 
                 // The specularity can become NaN if the input specularity is white, which is physically impossible, but doable in the data model.
                 // In this case we simply reset the specularity to 1.
-                conductor_specularity.x = isnan(conductor_specularity.x) ? 1.0f : conductor_specularity.x;
-                conductor_specularity.y = isnan(conductor_specularity.y) ? 1.0f : conductor_specularity.y;
-                conductor_specularity.z = isnan(conductor_specularity.z) ? 1.0f : conductor_specularity.z;
+                conductor_specularity.r = isnan(conductor_specularity.r) ? 1.0f : conductor_specularity.r;
+                conductor_specularity.g = isnan(conductor_specularity.g) ? 1.0f : conductor_specularity.g;
+                conductor_specularity.b = isnan(conductor_specularity.b) ? 1.0f : conductor_specularity.b;
             }
         }
 
@@ -107,12 +107,12 @@ private:
         float specular_alpha, dielectric_specular_transmission;
         compute_specular_properties(m_roughness, dielectric_specularity, 1.0f, abs_cos_theta_o,
             specular_alpha, m_specular_scale, dielectric_specular_transmission);
-        float3 dielectric_tint = tint * dielectric_specular_transmission;
+        RGB dielectric_tint = tint * dielectric_specular_transmission;
 
         // Interpolate between dielectric and conductor parameters based on the metallic parameter.
         // Conductor diffuse component is black, so interpolation amounts to scaling.
-        m_specularity = to_rgb(lerp(make_float3(dielectric_specularity), conductor_specularity, metallic));
-        m_diffuse_tint = to_rgb(dielectric_tint * (1.0f - metallic));
+        m_specularity = lerp(RGB(dielectric_specularity), conductor_specularity, metallic);
+        m_diffuse_tint = dielectric_tint * (1.0f - metallic);
 
         // Setup clear coat
         if (coat_scale > 0) {
@@ -171,7 +171,7 @@ public:
 
         // Tint and roughness
         float4 tint_roughness = material.get_tint_roughness(texcoord) * tint_and_roughness_scale;
-        float3 tint = make_float3(tint_roughness);
+        RGB tint = RGB(tint_roughness.x, tint_roughness.y, tint_roughness.z);
         float roughness = max(tint_roughness.w, min_roughness);
 
         float coat_rho;
@@ -187,7 +187,7 @@ public:
 
     __inline_all__ float get_roughness() const { return m_roughness; }
     __inline_all__ float get_specular_alpha() const { return Bifrost::Assets::Shading::BSDFs::GGX::alpha_from_roughness(m_roughness); }
-    __inline_all__ optix::float3 get_specularity() const { return to_float3(m_specularity); }
+    __inline_all__ RGB get_specularity() const { return m_specularity; }
 
     __inline_all__ float get_diffuse_probability() const { return 1.0f - (m_specular_probability + m_coat_probability) / USHORT_MAX; }
     __inline_all__ float get_specular_probability() const { return m_specular_probability / USHORT_MAX; }
@@ -286,16 +286,16 @@ public:
     }
 
     // Estimate the directional-hemispherical reflectance function.
-    __inline_all__ optix::float3 rho(float abs_cos_theta) const {
-        optix::float3 radiance = diffuse_rho(abs_cos_theta) + specular_rho(abs_cos_theta);
+    __inline_all__ RGB rho(float abs_cos_theta) const {
+        RGB radiance = diffuse_rho(abs_cos_theta) + specular_rho(abs_cos_theta);
         if (m_coat_scale > 0.0f)
             radiance = radiance + coat_rho(abs_cos_theta);
         return radiance;
     }
 
-    __inline_all__ optix::float3 diffuse_rho(float abs_cos_theta) const { return to_float3(m_diffuse_tint); }
-    __inline_all__ optix::float3 specular_rho(float abs_cos_theta) const {
-        return SpecularRho::fetch(abs_cos_theta, m_roughness).rho(to_float3(m_specularity)) * m_specular_scale;
+    __inline_all__ RGB diffuse_rho(float abs_cos_theta) const { return m_diffuse_tint; }
+    __inline_all__ RGB specular_rho(float abs_cos_theta) const {
+        return to_rgb(SpecularRho::fetch(abs_cos_theta, m_roughness).rho(to_float3(m_specularity))) * m_specular_scale;
     }
     __inline_all__ float coat_rho(float abs_cos_theta) const {
         float coat_roughness = Bifrost::Assets::Shading::BSDFs::GGX::roughness_from_alpha(m_coat_alpha);

@@ -10,7 +10,6 @@
 
 #include <Assets/FlagsTest.h>
 
-#include <LightSources/SphereLightTest.h>
 #include <LightSources/SpotLightTest.h>
 
 #include <ShadingModels/DefaultShadingTest.h>
