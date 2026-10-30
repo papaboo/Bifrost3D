@@ -111,6 +111,20 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
 
     ShadingModels::BsdfLtcStack bsdf_ltcs = shading_model.get_LTC_representation(abs(wo.z));
 
+    // Apply ambient occlusion to area lights based on the LTC roughness.
+    // In the future this could also depend on the size of the light source, similar to how specular contribution is scaled in GTAO.
+    {
+        ShadingModels::BsdfLtc ltcs[] = bsdf_ltcs.bsdfs;
+
+        #pragma warning (disable: 3557) // Disable warning about potential loop unrolling. For some materials the count will be a constant, for others it will be a variable.
+        for (int brdf_index = 0; brdf_index < bsdf_ltcs.count; ++brdf_index) {
+            float roughness = ltcs[brdf_index].shading_to_ltc.get_roughness();
+            ltcs[brdf_index].tint *= lerp(1, ambient_visibility, roughness);
+        }
+        #pragma warning (enable: 3557)
+        bsdf_ltcs.bsdfs = ltcs;
+    }
+
     // Apply analytical area light sources.
     for (int area_l = delta_light_count; area_l < total_light_count; ++area_l) {
         LightData area_light = light_data[area_l];
