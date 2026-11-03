@@ -132,6 +132,8 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
     }
 
     // Apply mesh lights
+    // The world position is moved a bit back, such that an emissive triangle won't light itself or a nearby neighbour in the same plane.
+    float3 lit_world_position = offset_ray_origin(input.world_position, -world_normal);
     uint mesh_light_count, mesh_light_size;
     mesh_lights.GetDimensions(mesh_light_count, mesh_light_size);    
     for (uint ml = 0; ml < mesh_light_count; ++ml) {
@@ -141,7 +143,7 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
         #pragma warning (disable: 3557) // Disable warning about potential loop unrolling. For some materials the count will be a constant, for others it will be a variable.
         for (int brdf_index = 0; brdf_index < bsdf_ltcs.count; ++brdf_index) {
             ShadingModels::BsdfLtc bsdf_ltc = bsdf_ltcs.bsdfs[brdf_index];
-            radiance += bsdf_ltc.tint * LtcAreaLight::evaluate_triangle_light(bsdf_ltc.shading_to_ltc, world_wo, input.world_position, world_normal, light.positions, light.emission, two_sided);
+            radiance += bsdf_ltc.tint * LtcAreaLight::evaluate_triangle_light(bsdf_ltc.shading_to_ltc, world_wo, lit_world_position, world_normal, light.positions, light.emission, two_sided);
         }
         #pragma warning (enable: 3557)
     }

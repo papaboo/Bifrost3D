@@ -342,6 +342,25 @@ float3 decode_ss_octahedral_normal(float2 encoded_normal) {
     return normalize(n);
 }
 
+// Offset ray origin along the geometric normal. Values should ideally be in world space.
+// Source: Ray Tracing Gems 1, Chapter 6, A Fast and Robust Method for Avoiding Self-Intersection
+// For a more stable approach see https://developer.nvidia.com/blog/solving-self-intersection-artifacts-in-directx-raytracing/
+float3 offset_ray_origin(float3 ray_world_origin, float3 world_normal) {
+    const float origin = 1.0f / 32.0f;
+    const float float_scale = 1.0f / 65536.0f;
+    const float int_scale = 256.0f;
+
+    int3 of_i = int3(int_scale * world_normal);
+
+    float3 p_i = float3(asfloat(asint(ray_world_origin.x) + ((ray_world_origin.x < 0) ? -of_i.x : of_i.x)),
+                        asfloat(asint(ray_world_origin.y) + ((ray_world_origin.y < 0) ? -of_i.y : of_i.y)),
+                        asfloat(asint(ray_world_origin.z) + ((ray_world_origin.z < 0) ? -of_i.z : of_i.z)));
+
+    return float3(abs(ray_world_origin.x) < origin ? ray_world_origin.x + float_scale * world_normal.x : p_i.x,
+                  abs(ray_world_origin.y) < origin ? ray_world_origin.y + float_scale * world_normal.y : p_i.y,
+                  abs(ray_world_origin.z) < origin ? ray_world_origin.z + float_scale * world_normal.z : p_i.z);
+}
+
 // ------------------------------------------------------------------------------------------------
 // Cone functions.
 // ------------------------------------------------------------------------------------------------
