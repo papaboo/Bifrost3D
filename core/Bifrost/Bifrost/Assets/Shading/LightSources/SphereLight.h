@@ -9,9 +9,10 @@
 #ifndef _BIFROST_ASSETS_SHADING_LIGHTSOURCES_SPHERE_LIGHT_H_
 #define _BIFROST_ASSETS_SHADING_LIGHTSOURCES_SPHERE_LIGHT_H_
 
+#include <Bifrost/Assets/Shading/Constants.h>
+#include <Bifrost/Assets/Shading/Utils.h>
 #include <Bifrost/Math/Distributions.h>
 #include <Bifrost/Math/Intersect.h>
-#include <Bifrost/Assets/Shading/Utils.h>
 
 #ifndef GPU_COMPILATION
 #include <sstream>

@@ -174,6 +174,8 @@ public:
             m_mesh_lights = MeshLightManager();
 
             // Setup static state.
+            auto diffuse_sphere_light_visibility_srv = create_diffuse_sphere_light_visibility_srv(m_device);
+            m_render_context->PSSetShaderResources(SrvRegisters::DiffuseSphereLightVisibility, 1, &diffuse_sphere_light_visibility_srv);
             m_render_context->PSSetShaderResources(SrvRegisters::GgxLtcFit, 1, m_materials.get_GGX_LTC_fit_rho_srv_addr());
             m_render_context->PSSetShaderResources(SrvRegisters::TabulatedGgxWithFresnelRho, 1, m_materials.get_GGX_with_fresnel_rho_srv_addr());
 
@@ -184,7 +186,7 @@ public:
 
         { // Setup g-buffer
             { // Light
-                OBlob pixel_shader_blob = m_shader_manager.compile_shader_from_file("SphereLight.hlsl", "ps_5_0", "g_buffer_PS");
+                OBlob pixel_shader_blob = m_shader_manager.compile_shader_from_file("RenderAreaLights.hlsl", "ps_5_0", "g_buffer_PS");
                 THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_g_buffer.lights.pixel_shader));
             }
 
@@ -314,12 +316,12 @@ public:
         }
 
         { // Setup lights
-            m_lights.manager = LightManager(m_device, LightSources::capacity());
+            m_lights.manager = LightManager(m_device);
 
-            // Sphere light visualization shaders.
-            OBlob vertex_shader_blob = m_shader_manager.compile_shader_from_file("SphereLight.hlsl", "vs_5_0", "vs");
+            // Area light visualization shaders.
+            OBlob vertex_shader_blob = m_shader_manager.compile_shader_from_file("RenderAreaLights.hlsl", "vs_5_0", "vs");
             THROW_DX11_ERROR(m_device->CreateVertexShader(UNPACK_BLOB_ARGS(vertex_shader_blob), nullptr, &m_lights.vertex_shader));
-            OBlob pixel_shader_blob = m_shader_manager.compile_shader_from_file("SphereLight.hlsl", "ps_5_0", "color_PS");
+            OBlob pixel_shader_blob = m_shader_manager.compile_shader_from_file("RenderAreaLights.hlsl", "ps_5_0", "color_PS");
             THROW_DX11_ERROR(m_device->CreatePixelShader(UNPACK_BLOB_ARGS(pixel_shader_blob), nullptr, &m_lights.pixel_shader));
         }
 

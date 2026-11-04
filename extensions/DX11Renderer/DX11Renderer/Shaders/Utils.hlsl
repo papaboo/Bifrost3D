@@ -82,6 +82,12 @@ struct IsotropicLTC {
     float3x3 get_M() { return invert_matrix(e00, e11, e22, e02, e20); }
     float inverse_M_determinant() { return e11 * (e00 * e22 - e02 * e20); }
 
+    // Roughness of the LTC matrix is the elements e00 and e11 in the M matrix, normalized such that e22 = 1.
+    // See figure 2 in the paper.
+    float get_roughness_u() { return e22 / e00; }
+    float get_roughness_v() { return (e00 * e22 - e02 * e20) / (e00 * e11); }
+    float get_roughness() { return saturate(0.5 * (get_roughness_u() + get_roughness_v())); }
+
     // Specialized 3x3 matrix inversion for diagonal cross matrices.
     static float3x3 invert_matrix(float e00, float e11, float e22, float e02, float e20) {
         // As all non-zero elements are scaled by e11, we inline that into the precomputed determinant.
@@ -147,6 +153,7 @@ float3 schlick_fresnel(float3 incident_specular, float abs_cos_theta) {
     float t = pow5(1.0 - abs_cos_theta);
     return (1 - t) * incident_specular + t;
 }
+float safe_sqrt(float v) { return sqrt(max(0, v)); }
 
 float2 direction_to_latlong_texcoord(float3 direction) {
     float u = (atan2(direction.z, direction.x) + PI) * 0.5f * RECIP_PI;
@@ -333,6 +340,25 @@ float2 encode_ss_octahedral_normal(float3 normal) {
 float3 decode_ss_octahedral_normal(float2 encoded_normal) {
     float3 n = float3(encoded_normal, -1.0 + abs(encoded_normal.x) + abs(encoded_normal.y));
     return normalize(n);
+}
+
+// Offset ray origin along the geometric normal. Values should ideally be in world space.
+// Source: Ray Tracing Gems 1, Chapter 6, A Fast and Robust Method for Avoiding Self-Intersection
+// For a more stable approach see https://developer.nvidia.com/blog/solving-self-intersection-artifacts-in-directx-raytracing/
+float3 offset_ray_origin(float3 ray_world_origin, float3 world_normal) {
+    const float origin = 1.0f / 32.0f;
+    const float float_scale = 1.0f / 65536.0f;
+    const float int_scale = 256.0f;
+
+    int3 of_i = int3(int_scale * world_normal);
+
+    float3 p_i = float3(asfloat(asint(ray_world_origin.x) + ((ray_world_origin.x < 0) ? -of_i.x : of_i.x)),
+                        asfloat(asint(ray_world_origin.y) + ((ray_world_origin.y < 0) ? -of_i.y : of_i.y)),
+                        asfloat(asint(ray_world_origin.z) + ((ray_world_origin.z < 0) ? -of_i.z : of_i.z)));
+
+    return float3(abs(ray_world_origin.x) < origin ? ray_world_origin.x + float_scale * world_normal.x : p_i.x,
+                  abs(ray_world_origin.y) < origin ? ray_world_origin.y + float_scale * world_normal.y : p_i.y,
+                  abs(ray_world_origin.z) < origin ? ray_world_origin.z + float_scale * world_normal.z : p_i.z);
 }
 
 // ------------------------------------------------------------------------------------------------

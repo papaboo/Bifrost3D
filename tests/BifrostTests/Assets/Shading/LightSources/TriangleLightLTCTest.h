@@ -46,7 +46,7 @@ float triangle_light_integration_error(Math::Vector3f wo, BSDFModel bsdf_model, 
     return (abs(error.r) + abs(error.g) + abs(error.b)) / 3.0f;
 }
 
-GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, triangle_light_only_shades_in_front) {
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, single_sided_triangle_light_only_shades_in_front) {
     using namespace Bifrost::Math;
 
     // Define the surface plane to illuminate.
@@ -55,20 +55,20 @@ GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, triangle_light_only_sh
     Vector3f surface_normal = { 0, 0, 1 };
     Vector3f wo = { 0, 0, 1 };
 
-    auto ltc_bsdf = Bifrost::Assets::Shading::LTC::lambert_LTC_coefficients();
-
     // Define triangle light above surface plane at (0, 0, 0) with normal pointing upwards.
     float distance_to_surface = 1.0f;
     Vector3f light_v0 = { -1, 1, distance_to_surface };
     Vector3f light_v1 = { 1, -1, distance_to_surface };
     Vector3f light_v2 = { 1, 1, distance_to_surface };
 
+    // Two sided triangle light illuminates on both sides.
     auto two_sided_light = TriangleLight({ light_v0, light_v1, light_v2 }, RGB::white(), true);
-    RGB radiance = two_sided_light.evaluate(ltc_bsdf, wo, surface_point, surface_normal);
+    RGB radiance = two_sided_light.evaluate_radiance(wo, surface_point, surface_normal);
     EXPECT_RGB_GT(radiance, 0.0f);
 
+    // One sided triangle light should not illuminate surface behind.
     auto one_sided_light = TriangleLight({ light_v0, light_v1, light_v2 }, RGB::white(), false);
-    radiance = one_sided_light.evaluate(ltc_bsdf, wo, surface_point, surface_normal);
+    radiance = one_sided_light.evaluate_radiance(wo, surface_point, surface_normal);
     EXPECT_RGB_EQ(radiance, RGB::black());
 }
 
@@ -384,15 +384,15 @@ GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, LTC_evaluation_account
         }
 }
 
-GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, LTC_integration_yields_same_result_as_triangle_light) {
+GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, LTC_integration_yields_same_result_as_monte_carlo) {
     using namespace Bifrost::Math;
 
-    int max_samples = 1024;
+    int sample_count = 1024;
     int max_wo_sample_count = 4;
 
     auto lambert_bsdf = BSDFs::LambertWrapper();
     auto ltc_lambert_bsdf = Bifrost::Assets::Shading::LTC::lambert_LTC_coefficients();
-    Vector3f wo = Vector3f(0, 0, 1); // wo just needs to lie in the positive hemipshere for lambert bsdf, the direction itself is irrelevant.
+    Vector3f wo = Vector3f(0, 0, 1); // wo just needs to lie in the positive hemisphere for lambert bsdf, the direction itself is irrelevant.
 
     for (float size : { 1, 5 }) {
         Trianglef triangle = Trianglef(Vector3f(0, 0, 0), Vector3f(0, size, 0), Vector3f(size, 0, 0));
@@ -404,19 +404,9 @@ GTEST_TEST(Assets_Shading_LightSources_TriangleLight_LTC, LTC_integration_yields
             Vector3f direction_to_light = normalize(light_center - shaded_position);
 
             for (Vector3f shaded_normal : { Vector3f(0, 0, 1), direction_to_light }) {
-
                 EXPECT_LT(dot(shaded_normal, light.get_normal()), 0.0f) << "Triangle light should point towards shaded position.";
 
-                RGB summed_reflectance_area_light = RGB(0.0f);
-                for (unsigned int s = 0u; s < max_samples; ++s) {
-                    Vector2f random_sample = BSDFTestUtils::bsdf_rng_sample2f(s);
-
-                    LightSample sample = light.sample_radiance(shaded_position, random_sample);
-                    Vector3f wi = sample.direction_to_light;
-                    summed_reflectance_area_light += lambert_bsdf.evaluate(wo, wi) * sample.radiance * (dot(shaded_normal, wi) / sample.PDF.value());
-                }
-                RGB reflectance_area_light = summed_reflectance_area_light / float(max_samples);
-
+                RGB reflectance_area_light = BSDFTestUtils::integrate_light_over_surface(wo, shaded_position, shaded_normal, lambert_bsdf, light, sample_count);
                 RGB reflectance_ltc_light = light.evaluate(ltc_lambert_bsdf, wo, shaded_position, shaded_normal);
 
                 EXPECT_RGB_EQ_PCT(reflectance_ltc_light, reflectance_area_light, 0.0025f) << "ratio: " << reflectance_area_light.r / reflectance_ltc_light.r;

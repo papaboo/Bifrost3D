@@ -10,6 +10,7 @@
 #define _DX11_RENDERER_SHADERS_SHADING_MODELS_DIFFUSE_SHADING_H_
 
 #include <BSDFs/Diffuse.hlsl>
+#include <ShadingModels/EvaluateAreaLights.hlsl>
 #include <ShadingModels/IShadingModel.hlsl>
 #include <ShadingModels/Utils.hlsl>
 #include <Utils.hlsl>
@@ -40,18 +41,6 @@ struct DiffuseShading : IShadingModel {
             return float3(0, 0, 0);
 
         return m_tint * BSDFs::OrenNayar::evaluate(m_roughness, wo, wi);
-    }
-
-    // Evaluate the material lit by a sphere light.
-    // Not fitted to OrenNayar, so we use a lambertian (roughness = 0) approximation
-    float3 evaluate_sphere_light(float3 wo, SphereLight light, float ambient_visibility) {
-        // Return no contribution if seen or lit from the backside.
-        bool light_below_surface = light.position.z < -light.radius;
-        if (wo.z <= 0.0f || light_below_surface)
-            return float3(0, 0, 0);
-
-        float3 light_radiance = light.power * rcp(4.0f * PI * dot(light.position, light.position));
-        return evaluate_sphere_light_lambert(light, light_radiance, wo, m_tint, ambient_visibility);
     }
 
     // Evaluate the material lit by an IBL.

@@ -83,6 +83,32 @@ TEST_F(Scene_LightSource, create_sphere_light) {
     LightSources::deallocate();
 }
 
+TEST_F(Scene_LightSource, create_disk_light) {
+    LightSources::allocate(2u);
+
+    SceneNode light_node = SceneNode("Light");
+
+    const Math::RGB light_power(100.0f);
+    const float light_radius = 2.0f;
+
+    LightSources::allocate(2u);
+    DiskLight light = DiskLight(light_node, light_power, light_radius);
+    EXPECT_TRUE(light.exists());
+
+    EXPECT_EQ(LightSources::Type::Disk, light.get_type());
+    EXPECT_EQ(light_node, light.get_node());
+    EXPECT_EQ(light_power, light.get_power());
+    EXPECT_EQ(light_radius, light.get_radius());
+
+    // Test scene node created notification.
+    Core::Iterable<LightSources::ChangedIterator> changed_lights = LightSources::get_changed_lights();
+    EXPECT_EQ(1, changed_lights.end() - changed_lights.begin());
+    EXPECT_EQ(light, *changed_lights.begin());
+    EXPECT_EQ(LightSources::Change::Created, light.get_changes());
+
+    LightSources::deallocate();
+}
+
 TEST_F(Scene_LightSource, create_directional_light) {
     LightSources::allocate(2u);
 

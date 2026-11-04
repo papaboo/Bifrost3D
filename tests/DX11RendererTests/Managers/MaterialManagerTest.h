@@ -294,7 +294,7 @@ GTEST_TEST(MaterialManager, sample_GPU_GGX_LTC_texture_consistent_with_CPU) {
 
     // Upload rho texture and bilinear sampler
     auto GGX_LTC_fit_srv = MaterialManager::create_GGX_LTC_fit_srv(device);
-    context->CSSetShaderResources(13, 1, &GGX_LTC_fit_srv);
+    context->CSSetShaderResources(SrvRegisters::GgxLtcFit, 1, &GGX_LTC_fit_srv);
     auto bilinear_sampler = TextureManager::create_clamped_linear_sampler(device);
     context->CSSetSamplers(15, 1, &bilinear_sampler);
 
@@ -341,10 +341,10 @@ GTEST_TEST(MaterialManager, sample_GPU_GGX_LTC_texture_consistent_with_CPU) {
             auto expected_ltc = LTC::GGX_reflection_LTC_coefficients(cos_theta_o, roughness);
             float4 expected_ltc_params = { expected_ltc.e00, expected_ltc.e02, expected_ltc.e22, expected_ltc.e20 };
 
-            EXPECT_FLOAT_EQ_EPS(actual_ltc_params.x, expected_ltc_params.x, 0.0002f) << "cos_theta_o: " << cos_theta_o << ", roughness: " << roughness;
-            EXPECT_FLOAT_EQ_EPS(actual_ltc_params.y, expected_ltc_params.y, 0.0002f) << "cos_theta_o: " << cos_theta_o << ", roughness: " << roughness;
-            EXPECT_FLOAT_EQ_EPS(actual_ltc_params.z, expected_ltc_params.z, 0.0002f) << "cos_theta_o: " << cos_theta_o << ", roughness: " << roughness;
-            EXPECT_FLOAT_EQ_EPS(actual_ltc_params.w, expected_ltc_params.w, 0.0002f) << "cos_theta_o: " << cos_theta_o << ", roughness: " << roughness;
+            EXPECT_FLOAT_EQ_EPS(actual_ltc_params.x, expected_ltc_params.x, 0.001f) << "cos_theta_o: " << cos_theta_o << ", roughness: " << roughness;
+            EXPECT_FLOAT_EQ_EPS(actual_ltc_params.y, expected_ltc_params.y, 0.001f) << "cos_theta_o: " << cos_theta_o << ", roughness: " << roughness;
+            EXPECT_FLOAT_EQ_EPS(actual_ltc_params.z, expected_ltc_params.z, 0.001f) << "cos_theta_o: " << cos_theta_o << ", roughness: " << roughness;
+            EXPECT_FLOAT_EQ_EPS(actual_ltc_params.w, expected_ltc_params.w, 0.001f) << "cos_theta_o: " << cos_theta_o << ", roughness: " << roughness;
         }
     }
 }

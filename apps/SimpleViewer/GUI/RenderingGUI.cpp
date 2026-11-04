@@ -286,9 +286,19 @@ void RenderingGUI::layout_frame() {
                         RGB power = sphere_light.get_power();
                         if (ImGui::InputFloat3("Power", &power.r))
                             sphere_light.set_power(power);
+                    } else if (light_type == LightSources::Type::Disk) {
+                        DiskLight disk_light = light;
+                        
+                        float radius = disk_light.get_radius();
+                        if (ImGui::InputFloat("Radius", &radius))
+                            disk_light.set_radius(radius);
+
+                        RGB power = disk_light.get_power();
+                        if (ImGui::InputFloat3("Power", &power.r))
+                            disk_light.set_power(power);
                     } else if (light_type == LightSources::Type::Spot) {
                         SpotLight spot_light = light;
-                        
+
                         float radius = spot_light.get_radius();
                         if (ImGui::InputFloat("Radius", &radius))
                             spot_light.set_radius(radius);
@@ -322,13 +332,17 @@ void RenderingGUI::layout_frame() {
                 return light_node;
             };
 
-            if (ImGui::Button("Create Directional Light")) {
-                SceneNode light_node = create_new_light_node("Directional Light");
-                DirectionalLight(light_node, RGB(0.5f));
-            }
             if (ImGui::Button("Create Sphere Light")) {
                 SceneNode light_node = create_new_light_node("Sphere Light");
                 SphereLight(light_node, RGB(1.0f), 0.1f);
+            }
+            if (ImGui::Button("Create Disk Light")) {
+                SceneNode light_node = create_new_light_node("Disk Light");
+                DiskLight(light_node, RGB(1.0f), 0.1);
+            }
+            if (ImGui::Button("Create Directional Light")) {
+                SceneNode light_node = create_new_light_node("Directional Light");
+                DirectionalLight(light_node, RGB(0.5f));
             }
         });
 
