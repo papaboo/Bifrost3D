@@ -198,6 +198,71 @@ GTEST_TEST(Math_Intersect, ray_triangle_can_miss_from_behind_triangle) {
     }
 }
 
+GTEST_TEST(Math_Intersect, circle_inside_circle_does_not_overlap) {
+    Vector2f center0 = { 0, 0 };
+    float radius0 = 2;
+    Vector2f center1 = { 1, 0 };
+    float radius1 = 1;
+
+    auto intersection = Intersect::circle_intersections(center0, radius0, center1, radius1);
+    EXPECT_TRUE(intersection.is_inside());
+    EXPECT_FALSE(intersection.intersecting_point());
+}
+
+GTEST_TEST(Math_Intersect, circle_outside_circle_does_not_overlap) {
+    Vector2f center0 = { 0, 0 };
+    float radius0 = 2;
+    Vector2f center1 = { 4, 0 };
+    float radius1 = 1;
+
+    auto intersection = Intersect::circle_intersections(center0, radius0, center1, radius1);
+    EXPECT_FALSE(intersection.is_inside());
+    EXPECT_FALSE(intersection.intersecting_point());
+}
+
+GTEST_TEST(Math_Intersect, equal_circles_are_inside_each_other) {
+    Vector2f center0 = { 2, -3 };
+    float radius0 = 2;
+
+    auto intersection = Intersect::circle_intersections(center0, radius0, center0, radius0);
+    EXPECT_TRUE(intersection.is_inside());
+    EXPECT_FALSE(intersection.intersecting_point());
+}
+
+GTEST_TEST(Math_Intersect, circle_grazing_circle_overlaps_with_duplicate_points) {
+    Vector2f center0 = { 0, 0 };
+    float radius0 = 2;
+    Vector2f center1 = { 3, 0 };
+    float radius1 = 1;
+
+    auto intersection = Intersect::circle_intersections(center0, radius0, center1, radius1);
+    EXPECT_FALSE(intersection.is_inside());
+    EXPECT_TRUE(intersection.intersecting_point());
+
+    EXPECT_FLOAT_EQ(intersection.p0.x, intersection.p1.x);
+    EXPECT_FLOAT_EQ(intersection.p0.y, intersection.p1.y);
+
+    EXPECT_FLOAT_EQ(intersection.p0.x, 2);
+    EXPECT_FLOAT_EQ(intersection.p0.y, 0);
+}
+
+GTEST_TEST(Math_Intersect, circle_intersecting_circle_produces_correct_points) {
+    Vector2f center0 = { 0, 1 };
+    float radius0 = 2;
+    Vector2f center1 = { 2, -1 };
+    float radius1 = 2;
+
+    auto intersection = Intersect::circle_intersections(center0, radius0, center1, radius1);
+    EXPECT_FALSE(intersection.is_inside());
+    EXPECT_TRUE(intersection.intersecting_point());
+
+    // Validate that both points lie on both circles.
+    EXPECT_FLOAT_EQ(radius0, magnitude(intersection.p0 - center0));
+    EXPECT_FLOAT_EQ(radius0, magnitude(intersection.p1 - center0));
+    EXPECT_FLOAT_EQ(radius1, magnitude(intersection.p0 - center1));
+    EXPECT_FLOAT_EQ(radius1, magnitude(intersection.p1 - center1));
+}
+
 } // NS Bifrost::Math
 
 #endif // _BIFROST_MATH_INTERSECT_TEST_H_
