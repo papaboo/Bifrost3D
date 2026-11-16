@@ -153,15 +153,16 @@ GTEST_TEST(Assets_Shading_LightSources_DiskLight, light_function_consistency) {
     Vector3f lit_position = Vector3f(0.0f, 0.0f, 2.0f);
     RGB light_power = RGB(1, 0.5f, 0.0f);
 
-    for (float radius : { 0.0f, 1.0f, 13.0f }) {
+    for (float radius : { 0.0f, 1.0f, 13.0f })
+        for (float cos_cutoff_angle : { 0.0f, 0.5f, 1.0f }) {
         const unsigned int sample_count = radius == 0.0f ? 1 : 32;
         for (bool is_two_sided : { true, false })
             for (Vector3f normal : { Vector3f(0, 0, 1), Vector3f(0, 0, -1) }) {
                 Disk surface = Disk(Vector3f::zero(), radius, normal);
-                DiskLight light = DiskLight(surface, light_power, is_two_sided);
+                DiskLight light = DiskLight(surface, light_power, is_two_sided, cos_cutoff_angle);
                 LightTestUtils::light_consistency_test(light, lit_position, sample_count);
             }
-    }
+        }
 }
 
 GTEST_TEST(Assets_Shading_LightSources_DiskLight, evaluation_and_PDF_rejects_rays_that_miss) {
@@ -219,6 +220,91 @@ GTEST_TEST(Assets_Shading_LightSources_DiskLight, delta_light_contribution_simil
 
             EXPECT_RGB_EQ_PCT(radiance_delta_light, radiance_area_light, 0.001f);
         }
+}
+
+GTEST_TEST(Assets_Shading_LightSources_DiskLight, near_directional_spot_lights_do_not_have_infinite_emitted_radiance) {
+    using namespace Bifrost::Math;
+
+    float delta_cutoff_angle = 1.0f;
+    bool is_two_sided = true;
+
+    Disk surface = Disk(Vector3f(0, 0, 0), 1, Vector3f(0, 0, -1));
+    DiskLight area_light = DiskLight(surface, RGB(10), is_two_sided, delta_cutoff_angle);
+
+    DiskLight delta_light = DiskLight(surface.center, surface.normal, RGB(10), is_two_sided, delta_cutoff_angle);
+
+    Vector3 lit_position = surface.center + surface.normal;
+
+    for (DiskLight light : { delta_light, area_light }) {
+        // Emitted radiance is only valid for area lights
+        if (light.get_surface().radius > 0.0f) {
+            RGB emitted_radiance = light.get_emitted_radiance();
+            EXPECT_FALSE(isinf(emitted_radiance.r));
+            EXPECT_FALSE(isinf(emitted_radiance.g));
+            EXPECT_FALSE(isinf(emitted_radiance.b));
+        }
+
+        auto sample = light.sample_radiance(lit_position, { 0.5f, 0.5f });
+        EXPECT_FALSE(isinf(sample.radiance.r));
+        EXPECT_FALSE(isinf(sample.radiance.g));
+        EXPECT_FALSE(isinf(sample.radiance.b));
+    }
+}
+
+GTEST_TEST(Assets_Shading_LightSources_DiskLight, emitted_radiance_scales_with_cutoff_angle) {
+    using namespace Bifrost::Math;
+
+    bool is_two_sided = true;
+    float no_cutoff = 0.0f;
+    float some_cutoff = 0.5f;
+    float max_cutoff = 1.0f;
+
+    Disk surface = Disk(Vector3f(0, 0, 0), 1, Vector3f(0, 0, -1));
+
+    auto no_cutoff_radiance = DiskLight(surface, RGB(10), is_two_sided, no_cutoff).get_emitted_radiance();
+    auto some_cutoff_radiance = DiskLight(surface, RGB(10), is_two_sided, some_cutoff).get_emitted_radiance();
+    auto max_cutoff_radiance = DiskLight(surface, RGB(10), is_two_sided, max_cutoff).get_emitted_radiance();
+
+    EXPECT_TRUE(no_cutoff_radiance.r < some_cutoff_radiance.r);
+    EXPECT_TRUE(no_cutoff_radiance.g < some_cutoff_radiance.g);
+    EXPECT_TRUE(no_cutoff_radiance.b < some_cutoff_radiance.b);
+
+    EXPECT_TRUE(some_cutoff_radiance.r < max_cutoff_radiance.r);
+    EXPECT_TRUE(some_cutoff_radiance.g < max_cutoff_radiance.g);
+    EXPECT_TRUE(some_cutoff_radiance.b < max_cutoff_radiance.b);
+}
+
+GTEST_TEST(Assets_Shading_LightSources_DiskLight, positions_outside_cutoff_angle_are_not_lit) {
+    using namespace Bifrost::Math;
+
+    float cos_cutoff_angle = 0.5f;
+
+    Disk light_surface = Disk(Vector3f(0, 0, 0), 1, Vector3f(0, 0, -1));
+    DiskLight light = DiskLight(light_surface, RGB(10), true, cos_cutoff_angle);
+
+    Vector3f lit_position_in_front = light_surface.center + light_surface.normal;
+    Vector3f lit_position_behind = light_surface.center - light_surface.normal;
+
+    auto lambert_bsdf = BSDFs::LambertWrapper();
+
+    for (Vector3f lit_position : { lit_position_in_front, lit_position_behind }) {
+        Vector3f shaded_normal = normalize(light_surface.center - lit_position);
+        Vector3f wo = -shaded_normal;
+
+        RGB lit_reflectance = BSDFTestUtils::integrate_light_over_surface(wo, lit_position, shaded_normal, lambert_bsdf, light, 1024);
+        EXPECT_RGB_GT(lit_reflectance, 0.0f);
+    }
+
+    Vector3f unlit_position_in_front = light_surface.center + light_surface.normal + Vector3f(3, 0, 0);
+    Vector3f unlit_position_behind = light_surface.center - light_surface.normal + Vector3f(3, 0, 0);
+
+    for (Vector3f unlit_position : { unlit_position_in_front, unlit_position_behind }) {
+        Vector3f shaded_normal = normalize(light_surface.center - unlit_position);
+        Vector3f wo = -shaded_normal;
+
+        RGB unlit_reflectance = BSDFTestUtils::integrate_light_over_surface(wo, unlit_position, shaded_normal, lambert_bsdf, light, 1024);
+        EXPECT_RGB_EQ(RGB::black(), unlit_reflectance);
+    }
 }
 
 } // NS Bifrost::Assets::Shading::LightSources
