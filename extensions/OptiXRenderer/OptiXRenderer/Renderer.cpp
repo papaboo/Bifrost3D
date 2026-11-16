@@ -873,7 +873,7 @@ struct Renderer::Implementation {
                         auto light_position = host_light.get_node().get_global_transform().translation;
                         auto light_direction = host_light.get_node().get_global_transform().rotation.forward();
                         Math::Disk surface = Math::Disk(light_position, host_light.get_radius(), light_direction);
-                        device_light.disk = DiskLight(surface, host_light.get_power(), true);
+                        device_light.disk = DiskLight(surface, host_light.get_power(), true, host_light.get_cos_cutoff_angle());
                         break;
                     }
                     case LightSources::Type::Spot:
