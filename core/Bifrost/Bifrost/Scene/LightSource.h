@@ -75,6 +75,8 @@ public:
     static void set_disk_light_power(LightSourceID light_ID, Math::RGB power);
     static inline float get_disk_light_radius(LightSourceID light_ID) { assert(get_type(light_ID) == Type::Disk); return m_lights[light_ID].disk.radius; }
     static void set_disk_light_radius(LightSourceID light_ID, float radius);
+    static inline float get_disk_light_cos_cutoff_angle(LightSourceID light_ID) { assert(get_type(light_ID) == Type::Disk); return m_lights[light_ID].disk.cos_cutoff_angle / float(USHRT_MAX); }
+    static void set_disk_light_cos_cutoff_angle(LightSourceID light_ID, float cos_cutoff_angle);
 
     // Spot light
     static inline bool is_delta_spot_light(LightSourceID light_ID) { assert(get_type(light_ID) == Type::Spot); return m_lights[light_ID].spot.radius == 0.0f || m_lights[light_ID].spot.cos_angle == USHRT_MAX; }
@@ -122,7 +124,8 @@ private:
             } sphere;
 
             struct {
-                float radius;
+                half_float::half radius;
+                unsigned short cos_cutoff_angle;
             } disk;
 
             struct {
@@ -222,6 +225,8 @@ public:
     inline void set_power(Math::RGB power) { LightSources::set_disk_light_power(m_ID, power); }
     inline float get_radius() const { return LightSources::get_disk_light_radius(m_ID); }
     inline void set_radius(float radius) { LightSources::set_disk_light_radius(m_ID, radius); }
+    inline float get_cos_cutoff_angle() const { return LightSources::get_disk_light_cos_cutoff_angle(m_ID); }
+    inline void set_cos_cutoff_angle(float cos_cutoff_angle) { LightSources::set_disk_light_cos_cutoff_angle(m_ID, cos_cutoff_angle); }
 };
 
 // ---------------------------------------------------------------------------

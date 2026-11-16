@@ -10,8 +10,7 @@
 
 using namespace Bifrost::Math;
 
-namespace Bifrost {
-namespace Scene {
+namespace Bifrost::Scene {
 
 LightSourceIDGenerator LightSources::m_UID_generator = LightSourceIDGenerator(0u);
 
@@ -185,6 +184,11 @@ void LightSources::set_disk_light_radius(LightSourceID light_ID, float radius) {
     flag_as_updated(light_ID);
 }
 
+void LightSources::set_disk_light_cos_cutoff_angle(LightSourceID light_ID, float cos_cutoff_angle) {
+    m_lights[light_ID].disk.cos_cutoff_angle = unsigned short(cos_cutoff_angle * USHRT_MAX + 0.5f);
+    flag_as_updated(light_ID);
+}
+
 // ------------------------------------------------------------------------------------------------
 // Spot light modifiers.
 // ------------------------------------------------------------------------------------------------
@@ -211,5 +215,4 @@ void LightSources::set_directional_light_radiance(LightSourceID light_ID, Math::
     flag_as_updated(light_ID);
 }
 
-} // NS Scene
-} // NS Bifrost
+} // NS Bifrost::Scene
