@@ -293,6 +293,10 @@ void RenderingGUI::layout_frame() {
                         if (ImGui::InputFloat("Radius", &radius))
                             disk_light.set_radius(radius);
 
+                        float cos_angle = disk_light.get_cos_cutoff_angle();
+                        if (ImGui::SliderFloat("Cos(angle)", &cos_angle, 0, 0.999f))
+                            disk_light.set_cos_cutoff_angle(cos_angle);
+
                         RGB power = disk_light.get_power();
                         if (ImGui::InputFloat3("Power", &power.r))
                             disk_light.set_power(power);
