@@ -20,13 +20,13 @@ namespace OptiXRenderer::Shading::ShadingModels {
 // ---------------------------------------------------------------------------
 class DiffuseShading {
 private:
-    Bifrost::Math::RGB m_tint;
+    RGB m_tint;
     float m_roughness;
 
 public:
 
-    __inline_all__ DiffuseShading(optix::float3 tint, float roughness)
-        : m_tint(to_rgb(tint)), m_roughness(roughness) { }
+    __inline_all__ DiffuseShading(RGB tint, float roughness)
+        : m_tint(tint), m_roughness(roughness) { }
 
     __inline_all__ BSDFResponse evaluate_with_PDF(optix::float3 wo, optix::float3 wi) const {
         // Return no contribution if the light is on the backside.
@@ -46,8 +46,8 @@ public:
         return bsdf_sample;
     }
 
-    __inline_all__ optix::float3 rho(float abs_cos_theta) const {
-        return to_float3(m_tint);
+    __inline_all__ RGB rho(float abs_cos_theta) const {
+        return m_tint;
     }
 };
 

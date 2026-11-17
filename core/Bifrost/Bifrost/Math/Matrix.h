@@ -245,33 +245,45 @@ using Matrix3x3f = Matrix3x3<float>;
 using Matrix3x4f = Matrix3x4<float>;
 using Matrix4x4f = Matrix4x4<float>;
 
+// Compute the trace of a 2x2 matrix.
+template <typename T>
+_inline_all_archs_ T trace(Matrix2x2<T> v) { return v(0,0) + v(1,1); }
+
+// Compute the trace of a 3x3 matrix.
+template <typename T>
+_inline_all_archs_ T trace(Matrix3x3<T> v) { return v(0,0) + v(1,1) + v(2,2); }
+
+// Compute the trace of a 4x4 matrix.
+template <typename T>
+_inline_all_archs_ T trace(Matrix4x4<T> v) { return v(0, 0) + v(1, 1) + v(2, 2) + v(3, 3); }
+
 // Compute the determinant of a 2x2 matrix.
 template <typename T>
-__always_inline__ GPU_ENABLED T determinant(Matrix2x2<T> v) {
+_inline_all_archs_ T determinant(Matrix2x2<T> v) {
     return v[0][0] * v[1][1] - v[1][0] * v[0][1];
 }
 
 // Compute the determinant of a 3x3 matrix.
 template <typename T>
-__always_inline__ GPU_ENABLED T determinant(Matrix3x3<T> v) {
+_inline_all_archs_ T determinant(Matrix3x3<T> v) {
     return v[0][0] * (v[1][1] * v[2][2] - v[1][2] * v[2][1])
-        - v[0][1] * (v[1][0] * v[2][2] - v[1][2] * v[2][0])
-        + v[0][2] * (v[1][0] * v[2][1] - v[1][1] * v[2][0]);
+         - v[0][1] * (v[1][0] * v[2][2] - v[1][2] * v[2][0])
+         + v[0][2] * (v[1][0] * v[2][1] - v[1][1] * v[2][0]);
 }
 
 // Compute the determinant of a 4x4 matrix.
 template <typename T>
 inline GPU_ENABLED T determinant(Matrix4x4<T> v) {
     return v[0][3] * v[1][2] * v[2][1] * v[3][0] - v[0][2] * v[1][3] * v[2][1] * v[3][0] - v[0][3] * v[1][1] * v[2][2] * v[3][0] + v[0][1] * v[1][3] * v[2][2] * v[3][0]
-        + v[0][2] * v[1][1] * v[2][3] * v[3][0] - v[0][1] * v[1][2] * v[2][3] * v[3][0] - v[0][3] * v[1][2] * v[2][0] * v[3][1] + v[0][2] * v[1][3] * v[2][0] * v[3][1]
-        + v[0][3] * v[1][0] * v[2][2] * v[3][1] - v[0][0] * v[1][3] * v[2][2] * v[3][1] - v[0][2] * v[1][0] * v[2][3] * v[3][1] + v[0][0] * v[1][2] * v[2][3] * v[3][1]
-        + v[0][3] * v[1][1] * v[2][0] * v[3][2] - v[0][1] * v[1][3] * v[2][0] * v[3][2] - v[0][3] * v[1][0] * v[2][1] * v[3][2] + v[0][0] * v[1][3] * v[2][1] * v[3][2]
-        + v[0][1] * v[1][0] * v[2][3] * v[3][2] - v[0][0] * v[1][1] * v[2][3] * v[3][2] - v[0][2] * v[1][1] * v[2][0] * v[3][3] + v[0][1] * v[1][2] * v[2][0] * v[3][3]
-        + v[0][2] * v[1][0] * v[2][1] * v[3][3] - v[0][0] * v[1][2] * v[2][1] * v[3][3] - v[0][1] * v[1][0] * v[2][2] * v[3][3] + v[0][0] * v[1][1] * v[2][2] * v[3][3];
+         + v[0][2] * v[1][1] * v[2][3] * v[3][0] - v[0][1] * v[1][2] * v[2][3] * v[3][0] - v[0][3] * v[1][2] * v[2][0] * v[3][1] + v[0][2] * v[1][3] * v[2][0] * v[3][1]
+         + v[0][3] * v[1][0] * v[2][2] * v[3][1] - v[0][0] * v[1][3] * v[2][2] * v[3][1] - v[0][2] * v[1][0] * v[2][3] * v[3][1] + v[0][0] * v[1][2] * v[2][3] * v[3][1]
+         + v[0][3] * v[1][1] * v[2][0] * v[3][2] - v[0][1] * v[1][3] * v[2][0] * v[3][2] - v[0][3] * v[1][0] * v[2][1] * v[3][2] + v[0][0] * v[1][3] * v[2][1] * v[3][2]
+         + v[0][1] * v[1][0] * v[2][3] * v[3][2] - v[0][0] * v[1][1] * v[2][3] * v[3][2] - v[0][2] * v[1][1] * v[2][0] * v[3][3] + v[0][1] * v[1][2] * v[2][0] * v[3][3]
+         + v[0][2] * v[1][0] * v[2][1] * v[3][3] - v[0][0] * v[1][2] * v[2][1] * v[3][3] - v[0][1] * v[1][0] * v[2][2] * v[3][3] + v[0][0] * v[1][1] * v[2][2] * v[3][3];
 }
 
 template <typename T>
-__always_inline__ GPU_ENABLED Matrix2x2<T> invert(Matrix2x2<T> v) {
+_inline_all_archs_ Matrix2x2<T> invert(Matrix2x2<T> v) {
     Matrix2x2<T> inverse;
     inverse[0][0] = v[1][1];
     inverse[0][1] = -v[0][1];
@@ -281,7 +293,7 @@ __always_inline__ GPU_ENABLED Matrix2x2<T> invert(Matrix2x2<T> v) {
 }
 
 template <typename T>
-inline Matrix3x3<T> GPU_ENABLED invert(Matrix3x3<T> v) {
+inline GPU_ENABLED Matrix3x3<T> invert(Matrix3x3<T> v) {
     Matrix3x3<T> inverse;
 
     inverse[0][0] = v[1][1] * v[2][2] - v[1][2] * v[2][1];
@@ -300,7 +312,7 @@ inline Matrix3x3<T> GPU_ENABLED invert(Matrix3x3<T> v) {
 }
 
 template <typename T>
-inline Matrix4x4<T> GPU_ENABLED invert(Matrix4x4<T> v) {
+inline GPU_ENABLED Matrix4x4<T> invert(Matrix4x4<T> v) {
     Matrix4x4<T> inverse;
 
     inverse[0][0] = v[1][2] * v[2][3] * v[3][1] - v[1][3] * v[2][2] * v[3][1] + v[1][3] * v[2][1] * v[3][2] - v[1][1] * v[2][3] * v[3][2] - v[1][2] * v[2][1] * v[3][3] + v[1][1] * v[2][2] * v[3][3];

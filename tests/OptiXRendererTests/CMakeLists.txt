@@ -16,7 +16,6 @@ if (TARGET OptiXRenderer)
   )
 
   set(LIGHTSOURCES_SRCS
-    LightSources/SphereLightTest.h
     LightSources/SpotLightTest.h
   )
 

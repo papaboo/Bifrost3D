@@ -71,6 +71,7 @@ private:
 inline int sizeof_dx_format(DXGI_FORMAT format) {
     switch (format) {
     case DXGI_FORMAT_A8_UNORM:
+    case DXGI_FORMAT_R8_UNORM:
         return 1;
     case DXGI_FORMAT_R16_UNORM:
         return 2;
@@ -415,6 +416,10 @@ inline void buffer(ID3D11Device1* device, ID3D11DeviceContext1* context, ID3D11B
 }
 
 } // NS Readback
+
+constexpr unsigned int diffuse_sphere_light_visibility_texture_size = 32;
+OShaderResourceView create_diffuse_sphere_light_visibility_srv(ID3D11Device1& device);
+
 } // NS DX11Renderer
 
 #endif // _DX11RENDERER_RENDERER_UTILS_H_

@@ -57,7 +57,7 @@ if (DIRECTX11_FOUND AND WIN32)
     DX11Renderer/Shaders/ModelGBuffer.hlsl
     DX11Renderer/Shaders/ModelShading.hlsl
     DX11Renderer/Shaders/RNG.hlsl
-    DX11Renderer/Shaders/SphereLight.hlsl
+    DX11Renderer/Shaders/RenderAreaLights.hlsl
     DX11Renderer/Shaders/SSAO.hlsl
     DX11Renderer/Shaders/Utils.hlsl
   )
@@ -82,6 +82,7 @@ if (DIRECTX11_FOUND AND WIN32)
   set(SHADERS_SHADING_MODELS_SRC
     DX11Renderer/Shaders/ShadingModels/DefaultShading.hlsl
     DX11Renderer/Shaders/ShadingModels/DiffuseShading.hlsl
+    DX11Renderer/Shaders/ShadingModels/EvaluateAreaLights.hlsl
     DX11Renderer/Shaders/ShadingModels/IShadingModel.hlsl
     DX11Renderer/Shaders/ShadingModels/Utils.hlsl
   )

@@ -25,8 +25,8 @@ struct SphereLight {
         return light;
     }
 
-    // Evaluate the radiance of samples emitted from the sphere light source.
-    float3 radiance() {
+    // Emitted radiance of samples emitted from the sphere light source.
+    float3 emitted_radiance() {
         float divisor = 4.0 * pow2(PI * radius); // PI * surface area of sphere
         return power * rcp(divisor);
     }
@@ -52,17 +52,23 @@ struct LightData {
     float type() { return type_power.x; }
 
     // Sphere light property accessors.
+    bool is_sphere_light() { return type() == LightType::Sphere; }
     float3 sphere_power() { return type_power.yzw; }
+    float3 sphere_emitted_radiance() { return sphere_power() * rcp(4 * pow2(PI * sphere_radius())); }
     float3 sphere_position() { return spatial_softness.xyz; }
     float sphere_radius() { return spatial_softness.w; }
+    float sphere_surface_area() { return 4.0f * PI * pow2(sphere_radius()); }
     SphereLight sphere_light() { return SphereLight::make(sphere_position(), sphere_radius(), sphere_power()); }
 
     // Directional light property accessors.
+    bool is_directional_light() { return type() == LightType::Directional; }
     float3 directional_radiance() { return type_power.yzw; }
     float3 directional_direction() { return spatial_softness.xyz; } // Oh what a concise method name.
 
     // Spot light property accessors.
+    bool is_spot_light() { return type() == LightType::Spot; }
     float3 spot_power() { return type_power.yzw; }
+    float3 spot_emitted_radiance() { return spot_power() * rcp(2 * pow2(PI * spot_radius())); }
     float3 spot_position() { return spatial_softness.xyz; }
     float spot_radius() { return spatial_softness.w; }
     float spot_surface_area() { return PI * pow2(spot_radius()); }

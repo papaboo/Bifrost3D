@@ -12,8 +12,7 @@
 #include <OptiXRenderer/Types.h>
 #include <OptiXRenderer/Utils.h>
 
-namespace OptiXRenderer {
-namespace LightSources {
+namespace OptiXRenderer::LightSources {
 
 __inline_dev__ bool is_delta_light(const PresampledEnvironmentLight& light) {
     return false;
@@ -26,35 +25,17 @@ __inline_dev__ LightSample sample_radiance(const PresampledEnvironmentLight& lig
     return sample;
 }
 
-__inline_dev__ PDF pdf(const PresampledEnvironmentLight& light, optix::float3 direction_to_light) {
+__inline_dev__ LightResponse evaluate_with_PDF(const PresampledEnvironmentLight& light, optix::float3 direction_to_light) {
     optix::float2 uv = direction_to_latlong_texcoord(direction_to_light);
     float sin_theta = sqrtf(1.0f - direction_to_light.y * direction_to_light.y);
-    float PDF = optix::rtTex2D<float>(light.per_pixel_PDF_ID, uv.x, uv.y) / sin_theta;
-    return sin_theta == 0.0f ? PDF::delta_dirac(0) : PDF;
+    float pdf = optix::rtTex2D<float>(light.per_pixel_PDF_ID, uv.x, uv.y) / sin_theta;
+    PDF checked_PDF = sin_theta == 0.0f ? PDF::delta_dirac(0) : pdf;
+
+    RGB radiance = light.tint * to_rgb(optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y)));
+
+    return { radiance, checked_PDF };
 }
 
-__inline_dev__ optix::float3 evaluate(const PresampledEnvironmentLight& light, optix::float3 direction_to_light) {
-    optix::float2 uv = direction_to_latlong_texcoord(direction_to_light);
-    return light.tint * optix::make_float3(optix::rtTex2D<optix::float4>(light.environment_map_ID, uv.x, uv.y));
-}
-
-// ------------------------------------------------------------------------------------------------
-// Functions with generalized parameters.
-// ------------------------------------------------------------------------------------------------
-
-__inline_dev__ LightSample sample_radiance(const PresampledEnvironmentLight& light, optix::float3 lit_position, optix::float2 random_sample) {
-    return sample_radiance(light, random_sample);
-}
-
-__inline_dev__ PDF pdf(const PresampledEnvironmentLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
-    return pdf(light, direction_to_light);
-}
-
-__inline_dev__ optix::float3 evaluate(const PresampledEnvironmentLight& light, optix::float3 lit_position, optix::float3 direction_to_light) {
-    return evaluate(light, direction_to_light);
-}
-
-} // NS LightSources
-} // NS OptiXRenderer
+} // NS OptiXRenderer::LightSources
 
 #endif // _OPTIXRENDERER_PRESAMPLED_ENVIRONMENT_LIGHT_IMPLEMENTATION_H_

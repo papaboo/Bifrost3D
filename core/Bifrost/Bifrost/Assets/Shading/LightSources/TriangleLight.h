@@ -57,8 +57,10 @@ public:
 
         // Check if the point is behind the light source.
         Vector3f direction_to_v0 = m_surface.v0 - lit_position;
-        bool lit_position_behind = dot(direction_to_v0, m_normal) >= 0.0f;
-        if (lit_position_behind && !m_is_two_sided)
+        float signed_distance_to_plane = dot(direction_to_v0, m_normal);
+        bool lit_position_in_plane = signed_distance_to_plane == 0.0f;
+        bool lit_position_behind = signed_distance_to_plane >= 0.0f;
+        if (lit_position_in_plane || (!m_is_two_sided && lit_position_behind))
             return LightSample::none();
 
         LightSample light_sample;

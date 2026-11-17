@@ -13,6 +13,9 @@
 #include <OptiXRenderer/PublicTypes.h>
 #include <OptiXRenderer/RNG.h>
 
+#include <Bifrost/Assets/Shading/LightSources/DirectionalLight.h>
+#include <Bifrost/Assets/Shading/LightSources/DiskLight.h>
+#include <Bifrost/Assets/Shading/LightSources/SphereLight.h>
 #include <Bifrost/Assets/Shading/Utils.h>
 #include <Bifrost/Math/Color.h>
 #include <Bifrost/Math/Vector.h>
@@ -35,9 +38,15 @@ using RGB = Bifrost::Math::RGB;
 using Vector2f = Bifrost::Math::Vector2f;
 using Vector3f = Bifrost::Math::Vector3f;
 using Vector4f = Bifrost::Math::Vector4f;
+using Disk = Bifrost::Math::Disk;
 using PDF = Bifrost::Math::MonteCarlo::PDF;
 using BSDFResponse = Bifrost::Assets::Shading::BSDFResponse;
 using BSDFSample = Bifrost::Assets::Shading::BSDFSample;
+using LightResponse = Bifrost::Assets::Shading::LightResponse;
+using LightSample = Bifrost::Assets::Shading::LightSample;
+using DirectionalLight = Bifrost::Assets::Shading::LightSources::DirectionalLight;
+using DiskLight = Bifrost::Assets::Shading::LightSources::DiskLight;
+using SphereLight = Bifrost::Assets::Shading::LightSources::SphereLight;
 
 struct RayTypes {
     static const unsigned int MonteCarlo = 0;
@@ -117,17 +126,6 @@ struct __align__(16) Sphere {
     }
 };
 
-struct Disk {
-    optix::float3 center;
-    optix::float3 normal;
-    float radius;
-
-    __inline_all__ static Disk make(optix::float3 center, optix::float3 normal, float radius) {
-        Disk d = { center, normal, radius };
-        return d;
-    }
-};
-
 struct __align__(16) VertexGeometry {
     optix::float3 position;
     OctahedralNormal normal;
@@ -168,38 +166,12 @@ struct PrimitiveID {
 // Light source structs.
 //----------------------------------------------------------------------------
 
-struct __align__(16) LightSample {
-    optix::float3 radiance;
-    PDF PDF;
-    optix::float3 direction_to_light;
-    float distance;
-
-    __inline_all__ static LightSample none() {
-        LightSample sample = {};
-        sample.direction_to_light = { 0, 1, 0 };
-        sample.PDF = PDF::delta_dirac(0);
-        return sample;
-    }
-};
-
-struct SphereLight {
-    optix::float3 power;
-    optix::float3 position;
-    float radius;
-};
-
 struct SpotLight {
-    optix::float3 power;
-    optix::float3 position;
+    RGB power;
+    Vector3f position;
     float radius;
-    optix::float3 direction;
+    Vector3f direction;
     float cos_angle;
-};
-
-struct DirectionalLight {
-    optix::float3 radiance;
-    optix::float3 direction;
-    float __padding;
 };
 
 struct EnvironmentLight {
@@ -207,27 +179,27 @@ struct EnvironmentLight {
     int marginal_CDF_ID;
     int conditional_CDF_ID;
     int per_pixel_PDF_ID;
-    unsigned short tint_x; // Tint stored as fixedpoint
-    unsigned short tint_y; // Tint stored as fixedpoint
-    unsigned short tint_z; // Tint stored as fixedpoint
+    unsigned short tint_r; // Tint stored as fixedpoint
+    unsigned short tint_g; // Tint stored as fixedpoint
+    unsigned short tint_b; // Tint stored as fixedpoint
     unsigned short __padding; // Tint stored as fixedpoint
     unsigned short PDF_width;
     unsigned short PDF_height;
 
-    __inline_all__ static EnvironmentLight empty(optix::float3 tint) {
+    __inline_all__ static EnvironmentLight empty(RGB tint) {
         EnvironmentLight light = {};
         light.set_tint(tint);
         return light;
     }
 
-    __inline_all__ void set_tint(optix::float3 tint) {
-        tint_x = (unsigned short)fmaxf(65535.0f, tint.x * 65535.0f + 0.5f);
-        tint_y = (unsigned short)fmaxf(65535.0f, tint.y * 65535.0f + 0.5f);
-        tint_z = (unsigned short)fmaxf(65535.0f, tint.z * 65535.0f + 0.5f);
+    __inline_all__ void set_tint(RGB tint) {
+        tint_r = (unsigned short)fminf(65535.0f, tint.r * 65535.0f + 0.5f);
+        tint_g = (unsigned short)fminf(65535.0f, tint.g * 65535.0f + 0.5f);
+        tint_b = (unsigned short)fminf(65535.0f, tint.b * 65535.0f + 0.5f);
     }
 
-    __inline_all__ optix::float3 get_tint() const {
-        return optix::make_float3(tint_x / 65535.0f, tint_y / 65535.0f, tint_z / 65535.0f);
+    __inline_all__ RGB get_tint() const {
+        return RGB(tint_r / 65535.0f, tint_g / 65535.0f, tint_b / 65535.0f);
     }
 };
 
@@ -236,32 +208,34 @@ struct PresampledEnvironmentLight {
     int per_pixel_PDF_ID; // Texture ID.
     int samples_ID; // Buffer ID.
     int sample_count;
-    optix::float3 tint;
+    RGB tint;
 
-    __inline_all__ static PresampledEnvironmentLight empty(optix::float3 tint) {
+    __inline_all__ static PresampledEnvironmentLight empty(RGB tint) {
         PresampledEnvironmentLight light = {};
         light.tint = tint;
         return light;
     }
 
-    __inline_all__ void set_tint(optix::float3 t) { tint = t; }
-    __inline_all__ optix::float3 get_tint() const { return tint; }
+    __inline_all__ void set_tint(RGB t) { tint = t; }
+    __inline_all__ RGB get_tint() const { return tint; }
 };
 
 struct __align__(16) Light {
     enum Flags {
         None = 0u,
         Sphere = 1u,
-        Directional = 2u,
-        Environment = 3u,
-        PresampledEnvironment = 4u,
-        Spot = 5u,
+        Disk = 2u,
+        Directional = 3u,
+        Environment = 4u,
+        PresampledEnvironment = 5u,
+        Spot = 6u,
         TypeMask = 7u
     };
 
     union {
         SphereLight sphere;
         DirectionalLight directional;
+        DiskLight disk;
         EnvironmentLight environment;
         PresampledEnvironmentLight presampled_environment;
         SpotLight spot;
@@ -291,7 +265,7 @@ struct __align__(16) Material {
 
     Flags flags;
     ShadingModel shading_model;
-    optix::float3 tint;
+    RGB tint;
 
     float roughness;
     int tint_roughness_texture_ID;
@@ -303,7 +277,7 @@ struct __align__(16) Material {
     float coverage;
     int coverage_texture_ID;
 
-    optix::float3 emission;
+    RGB emission;
     UNorm16 coat;
     UNorm16 coat_roughness;
 
@@ -313,7 +287,7 @@ struct __align__(16) Material {
 
 #if GPU_DEVICE
     __inline_all__ optix::float4 get_tint_roughness(optix::float2 texcoord) const {
-        optix::float4 tint_roughness = optix::make_float4(tint, roughness);
+        optix::float4 tint_roughness = optix::make_float4(tint.r, tint.g, tint.b, roughness);
         if (tint_roughness_texture_ID)
             tint_roughness *= optix::rtTex2D<optix::float4>(tint_roughness_texture_ID, texcoord.x, texcoord.y);
         if (roughness_texture_ID)
@@ -353,10 +327,10 @@ enum RngSamplingDimension {
 };
 
 struct __align__(16) MonteCarloPayload {
-    optix::float3 radiance;
+    RGB radiance;
     PrimitiveID primitive_id;
 
-    optix::float3 throughput;
+    RGB throughput;
     unsigned int bounces;
 
     optix::float3 position;
@@ -386,14 +360,15 @@ struct __align__(16) MonteCarloPayload {
 
     __inline_dev__ optix::float2 rng_sample2f(unsigned int sampling_dimension) { return make_float2(rng_sample4f(sampling_dimension)); }
 
-    __inline_dev__ void debug_output(optix::float3 color) {
+    __inline_dev__ void debug_output(RGB color) {
         throughput = { 0,0,0 };
         radiance = color;
     }
+    __inline_dev__ void debug_output(optix::float3 color) { debug_output(RGB(color.x, color.y, color.z)); }
 };
 
 struct ShadowPayload {
-    optix::float3 radiance;
+    RGB radiance;
 };
 
 //----------------------------------------------------------------------------

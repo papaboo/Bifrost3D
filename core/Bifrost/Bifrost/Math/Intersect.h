@@ -13,6 +13,7 @@
 #include <Bifrost/Math/Plane.h>
 #include <Bifrost/Math/Ray.h>
 #include <Bifrost/Math/Triangle.h>
+#include <Bifrost/Math/Utils.h>
 
 namespace Bifrost::Math::Intersect {
 
@@ -114,6 +115,48 @@ _inline_all_archs_ TriangleHit ray_triangle(Ray ray, Vector3f positions[3], bool
 
 _inline_all_archs_ TriangleHit ray_triangle(Ray ray, Trianglef triangle, bool two_sided = true) {
     return ray_triangle(ray, &triangle.v0, two_sided);
+}
+
+struct CircleIntersections {
+    Vector2f p0, p1;
+
+    _inline_all_archs_ bool is_inside() { return isinf(p0.x); }
+    _inline_all_archs_ bool intersecting_point() { return !isnan(p0.x) && !is_inside(); }
+
+    _inline_all_archs_ static CircleIntersections none() {
+        CircleIntersections res = { Vector2f(NAN), Vector2f(NAN) };
+        return res;
+    }
+
+    _inline_all_archs_ static CircleIntersections inside() {
+        CircleIntersections res = { Vector2f(INFINITY), Vector2f(INFINITY) };
+        return res;
+    }
+};
+
+// https://lucidar.me/en/mathematics/how-to-calculate-the-intersection-points-of-two-circles/
+_inline_all_archs_ CircleIntersections circle_intersections(Vector2f center0, float radius0, Vector2f center1, float radius1) {
+    float center_distance_sqrd = magnitude_squared(center0 - center1);
+
+    if (center_distance_sqrd > pow2(radius0 + radius1))
+        return CircleIntersections::none();
+
+    if (center_distance_sqrd <= pow2(radius0 - radius1))
+        return CircleIntersections::inside();
+
+    float distance = sqrtf(center_distance_sqrd);
+    float recip_distance = 1.0f / distance;
+
+    float a = (pow2(radius0) - pow2(radius1) + center_distance_sqrd) * 0.5f * recip_distance;
+
+    float height = sqrtf(pow2(radius0) - a * a);
+
+    float h_over_d = height * recip_distance;
+
+    Vector2f p5 = lerp(center0, center1, (a * recip_distance));
+    Vector2f tangent = { -h_over_d * (center1.y - center0.y), h_over_d * (center1.x - center0.x) };
+
+    return { p5 + tangent, p5 - tangent };
 }
 
 } // NS Bifrost::Math::Intersect

@@ -38,8 +38,9 @@ cbuffer material : register(b3) {
 StructuredBuffer<MeshLight> mesh_lights : register(t11);
 
 cbuffer lights : register(b12) {
-    int light_count;
-    int3 _padding;
+    int delta_light_count;
+    int total_light_count;
+    int2 _padding;
     LightData light_data[12];
 }
 
@@ -98,29 +99,41 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
     // Apply IBL
     radiance += scene_vars.environment_tint.rgb * shading_model.evaluate_IBL(world_wo, world_normal, ambient_visibility);
 
-    // Apply analytical light sources
-    for (int l = 0; l < light_count; ++l) {
-        LightData light = light_data[l];
+    // Apply analytical delta light sources.
+    for (int delta_l = 0; delta_l < delta_light_count; ++delta_l) {
+        LightData light = light_data[delta_l];
 
-        bool is_sphere_light = light.type() == LightType::Sphere && light.sphere_radius() > 0.0f;
-        if (is_sphere_light) {
-            // Compute sphere light position in shading space
-            SphereLight sphere_light = light.sphere_light();
-            sphere_light.position = mul(world_to_shading_TBN, sphere_light.position - input.world_position);
+        LightSample light_sample = sample_light(light, input.world_position);
+        float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
+        float3 f = shading_model.evaluate(wo, wi);
+        radiance += f * light_sample.radiance * abs(wi.z);
+    }
 
-            radiance += shading_model.evaluate_sphere_light(wo, sphere_light, ambient_visibility);
-        } else {
-            // Apply regular delta lights.
-            LightSample light_sample = sample_light(light, input.world_position);
-            float3 wi = mul(world_to_shading_TBN, light_sample.direction_to_light);
-            float3 f = shading_model.evaluate(wo, wi);
-            radiance += f * light_sample.radiance * abs(wi.z);
+    ShadingModels::BsdfLtcStack bsdf_ltcs = shading_model.get_LTC_representation(abs(wo.z));
+
+    // Apply ambient occlusion to area lights based on the LTC roughness.
+    // In the future this could also depend on the size of the light source, similar to how specular contribution is scaled in GTAO.
+    {
+        ShadingModels::BsdfLtc ltcs[] = bsdf_ltcs.bsdfs;
+
+        #pragma warning (disable: 3557) // Disable warning about potential loop unrolling. For some materials the count will be a constant, for others it will be a variable.
+        for (int brdf_index = 0; brdf_index < bsdf_ltcs.count; ++brdf_index) {
+            float roughness = ltcs[brdf_index].shading_to_ltc.get_roughness();
+            ltcs[brdf_index].tint *= lerp(1, ambient_visibility, roughness);
         }
+        #pragma warning (enable: 3557)
+        bsdf_ltcs.bsdfs = ltcs;
+    }
+
+    // Apply analytical area light sources.
+    for (int area_l = delta_light_count; area_l < total_light_count; ++area_l) {
+        LightData area_light = light_data[area_l];
+        radiance += ShadingModels::evaluate_area_light(area_light, bsdf_ltcs, world_wo, input.world_position, world_normal);
     }
 
     // Apply mesh lights
-    ShadingModels::BsdfLtcStack bsdf_ltcs = shading_model.get_LTC_representation(abs(wo.z));
-
+    // The world position is moved a bit back, such that an emissive triangle won't light itself or a nearby neighbour in the same plane.
+    float3 lit_world_position = offset_ray_origin(input.world_position, -world_normal);
     uint mesh_light_count, mesh_light_size;
     mesh_lights.GetDimensions(mesh_light_count, mesh_light_size);    
     for (uint ml = 0; ml < mesh_light_count; ++ml) {
@@ -130,7 +143,7 @@ float3 integrate(IShadingModelCreator shading_model_creator, Varyings input, boo
         #pragma warning (disable: 3557) // Disable warning about potential loop unrolling. For some materials the count will be a constant, for others it will be a variable.
         for (int brdf_index = 0; brdf_index < bsdf_ltcs.count; ++brdf_index) {
             ShadingModels::BsdfLtc bsdf_ltc = bsdf_ltcs.bsdfs[brdf_index];
-            radiance += bsdf_ltc.tint * LtcAreaLight::evaluate_triangle_light(bsdf_ltc.shading_to_ltc, world_wo, input.world_position, world_normal, light.positions, light.emission, two_sided);
+            radiance += bsdf_ltc.tint * LtcAreaLight::evaluate_triangle_light(bsdf_ltc.shading_to_ltc, world_wo, lit_world_position, world_normal, light.positions, light.emission, two_sided);
         }
         #pragma warning (enable: 3557)
     }

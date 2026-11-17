@@ -10,8 +10,7 @@
 
 using namespace Bifrost::Math;
 
-namespace Bifrost {
-namespace Scene {
+namespace Bifrost::Scene {
 
 LightSourceIDGenerator LightSources::m_UID_generator = LightSourceIDGenerator(0u);
 
@@ -97,6 +96,16 @@ LightSourceID LightSources::create_sphere_light(SceneNodeID node_ID, Math::RGB p
     return create_light(node_ID, light);
 }
 
+LightSourceID LightSources::create_disk_light(SceneNodeID node_ID, Math::RGB power, float radius) {
+    LightSources::Light light = {};
+    light.node_ID = node_ID;
+    light.type = LightSources::Type::Disk;
+    light.color = power;
+    light.disk.radius = radius;
+
+    return create_light(node_ID, light);
+}
+
 LightSourceID LightSources::create_spot_light(SceneNodeID node_ID, Math::RGB power, float radius, float cos_angle) {
     LightSources::Light light = {};
     light.node_ID = node_ID;
@@ -128,6 +137,8 @@ bool LightSources::is_delta_light(LightSourceID light_ID) {
     switch (get_type(light_ID)) {
     case Type::Sphere:
         return is_delta_sphere_light(light_ID);
+    case Type::Disk:
+        return is_delta_disk_light(light_ID);
     case Type::Spot:
         return is_delta_spot_light(light_ID);
     case Type::Directional:
@@ -161,6 +172,24 @@ void LightSources::set_sphere_light_radius(LightSourceID light_ID, float radius)
 }
 
 // ------------------------------------------------------------------------------------------------
+// Disk light modifiers.
+// ------------------------------------------------------------------------------------------------
+
+void LightSources::set_disk_light_power(LightSourceID light_ID, Math::RGB power) {
+    m_lights[light_ID].color = power;
+    flag_as_updated(light_ID);
+}
+void LightSources::set_disk_light_radius(LightSourceID light_ID, float radius) {
+    m_lights[light_ID].disk.radius = radius;
+    flag_as_updated(light_ID);
+}
+
+void LightSources::set_disk_light_cos_cutoff_angle(LightSourceID light_ID, float cos_cutoff_angle) {
+    m_lights[light_ID].disk.cos_cutoff_angle = unsigned short(cos_cutoff_angle * USHRT_MAX + 0.5f);
+    flag_as_updated(light_ID);
+}
+
+// ------------------------------------------------------------------------------------------------
 // Spot light modifiers.
 // ------------------------------------------------------------------------------------------------
 
@@ -186,5 +215,4 @@ void LightSources::set_directional_light_radiance(LightSourceID light_ID, Math::
     flag_as_updated(light_ID);
 }
 
-} // NS Scene
-} // NS Bifrost
+} // NS Bifrost::Scene
